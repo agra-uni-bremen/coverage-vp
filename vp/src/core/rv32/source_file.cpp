@@ -6,7 +6,7 @@
 using namespace rv32;
 using namespace nlohmann;
 
-void SourceFile::marshal(std::ostream &stream) {
+void SourceFile::to_json(json &out) {
 	json j;
 	json functions;
 
@@ -26,7 +26,8 @@ void SourceFile::marshal(std::ostream &stream) {
 	}
 
 	j["file"] = name;
+	j["lines"] = json::array();
 	j["functions"] = functions;
 
-	stream << j << std::endl;
+	out.push_back(j);
 }

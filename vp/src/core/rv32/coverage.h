@@ -9,8 +9,8 @@
 #include <memory>
 #include <vector>
 #include <utility>
-#include <fstream>
 
+#include <nlohmann/json.hpp>
 #include <elfutils/libdwfl.h>
 
 #include "mem_if.h"
@@ -39,8 +39,7 @@ private:
 	std::string name;
 	std::map<std::string, Function> funcs;
 
-public:
-	void marshal(std::ostream &stream);
+	void to_json(nlohmann::json &);
 };
 
 class Coverage {
@@ -57,6 +56,8 @@ class Coverage {
 public:
 	Coverage(std::string path, instr_memory_if *_instr_mem);
 	~Coverage(void);
+
+	void marshal(void);
 };
 
 }

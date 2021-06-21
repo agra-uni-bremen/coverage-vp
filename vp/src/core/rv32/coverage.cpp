@@ -8,6 +8,8 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
+#include <fstream>
+#include <filesystem>
 #include <system_error>
 #include <iostream>
 
@@ -137,4 +139,26 @@ size_t Coverage::count_blocks(uint64_t addr, uint64_t end) {
 	}
 
 	return num_blocks;
+}
+
+void Coverage::marshal(void) {
+	nlohmann::json j;
+
+	j["format_version"] = "1";
+	j["gcc_version"] = "10.3.1 20210424";
+	j["current_working_directory"] = "XXX";
+	j["data_file"] = "XXX";
+
+	for (auto &f : files) {
+		SourceFile &file = f.second;
+		file.to_json(j["files"]);
+
+		auto fp = f.first + ".json";
+		std::ofstream out(fp);
+		if (!out.is_open())
+			throw std::runtime_error("failed to open " + std::string(fp));
+
+		out << std::setw(4) << j << std::endl;
+	}
+
 }
