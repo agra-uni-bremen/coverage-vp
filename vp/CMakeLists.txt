@@ -20,6 +20,7 @@ set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR})
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 find_package( Boost REQUIRED COMPONENTS iostreams program_options log)
+find_package(nlohmann_json REQUIRED)
 
 if(NOT USE_SYSTEM_SYSTEMC)
 	find_package( SystemC REQUIRED)

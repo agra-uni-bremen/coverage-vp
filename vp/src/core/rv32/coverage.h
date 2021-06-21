@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 #include <utility>
+#include <fstream>
 
 #include <elfutils/libdwfl.h>
 
@@ -32,9 +33,14 @@ public:
 };
 
 class SourceFile {
-public:
+	friend class Coverage;
+
+private:
 	std::string name;
 	std::map<std::string, Function> funcs;
+
+public:
+	void marshal(std::ostream &stream);
 };
 
 class Coverage {

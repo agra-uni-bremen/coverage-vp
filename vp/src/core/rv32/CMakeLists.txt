@@ -4,9 +4,11 @@ add_library(rv32
 		iss.cpp
 		syscall.cpp
 		coverage.cpp
+		source_file.cpp
         ${HEADERS})
 
-target_link_libraries(rv32 symex core-common ${SoftFloat_LIBRARIES} dw)
+target_link_libraries(rv32 symex core-common ${SoftFloat_LIBRARIES}
+	nlohmann_json::nlohmann_json dw)
 
 if(COLOR_THEME STREQUAL "LIGHT")
 	message("> using color theme LIGHT")
