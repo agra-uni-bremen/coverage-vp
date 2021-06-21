@@ -104,7 +104,6 @@ std::string Coverage::get_loc(Dwfl_Module *mod, Function::Location &loc, GElf_Ad
 	if (!(srcfp = dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL)))
 		throw std::runtime_error("dwfl_lineinfo failed");
 
-	cnum++; /* For some reason, columns start at zero */
 	assert(lnum > 0 && cnum > 0);
 
 	loc.line = (unsigned int)lnum;
@@ -149,11 +148,12 @@ void Coverage::marshal(void) {
 	j["current_working_directory"] = "XXX";
 	j["data_file"] = "XXX";
 
+	nlohmann::json &jfiles = j["flies"];
 	for (auto &f : files) {
-		j["files"].clear();
+		jfiles.clear();
 
 		SourceFile &file = f.second;
-		file.to_json(j["files"]);
+		file.to_json(jfiles);
 
 		auto fp = f.first + ".json";
 		std::ofstream out(fp);
