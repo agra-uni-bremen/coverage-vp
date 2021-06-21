@@ -14,7 +14,7 @@
 
 namespace rv32 {
 
-class ELFFile {
+class Coverage {
 	int fd = -1;
 	Dwfl *dwfl = nullptr;
 	Dwfl_Module *mod = nullptr;
@@ -25,8 +25,8 @@ class ELFFile {
 	size_t count_blocks(uint64_t, uint64_t);
 
 public:
-	ELFFile(std::string path, instr_memory_if *_instr_mem);
-	~ELFFile(void);
+	Coverage(std::string path, instr_memory_if *_instr_mem);
+	~Coverage(void);
 };
 
 }

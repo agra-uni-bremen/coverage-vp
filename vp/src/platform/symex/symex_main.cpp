@@ -158,7 +158,7 @@ int sc_main(int argc, char **argv) {
 	if (opt.quiet)
 		 sc_core::sc_report_handler::set_verbosity_level(sc_core::SC_NONE);
 
-	ELFFile coverage(opt.input_program, instr_mem_if);
+	Coverage coverage(opt.input_program, instr_mem_if);
 	sc_core::sc_start();
 	if (!opt.quiet)
 		core.show();

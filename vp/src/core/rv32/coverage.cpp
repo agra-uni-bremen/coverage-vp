@@ -24,7 +24,7 @@ static const Dwfl_Callbacks offline_callbacks = (Dwfl_Callbacks){
 
 #define ARCH RV32
 
-ELFFile::ELFFile(std::string path, instr_memory_if *_instr_mem)
+Coverage::Coverage(std::string path, instr_memory_if *_instr_mem)
   : instr_mem(_instr_mem) {
 	const char *fn = path.c_str();
 
@@ -36,7 +36,7 @@ ELFFile::ELFFile(std::string path, instr_memory_if *_instr_mem)
 	init();
 }
 
-ELFFile::~ELFFile(void) {
+Coverage::~Coverage(void) {
 	if (fd >= 0) {
 		close(fd);
 		fd = -1;
@@ -49,7 +49,7 @@ ELFFile::~ELFFile(void) {
 }
 
 void
-ELFFile::init(void) {
+Coverage::init(void) {
 	int n;
 	Dwfl_Module *mod;
 
@@ -78,7 +78,7 @@ ELFFile::init(void) {
 }
 
 
-size_t ELFFile::count_blocks(uint64_t addr, uint64_t end) {
+size_t Coverage::count_blocks(uint64_t addr, uint64_t end) {
 	size_t num_blocks;
 	uint32_t mem_word;
 	int32_t opcode;
