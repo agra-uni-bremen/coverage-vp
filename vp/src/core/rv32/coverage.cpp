@@ -146,7 +146,7 @@ void Coverage::marshal(void) {
 	j["format_version"] = "1";
 	j["gcc_version"] = "10.3.1 20210424";
 
-	nlohmann::json &jfiles = j["flies"];
+	nlohmann::json &jfiles = j["files"];
 	for (auto &f : files) {
 		jfiles.clear();
 		auto path = std::filesystem::path(f.first);
