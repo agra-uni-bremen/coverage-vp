@@ -150,6 +150,8 @@ void Coverage::marshal(void) {
 	j["data_file"] = "XXX";
 
 	for (auto &f : files) {
+		j["files"].clear();
+
 		SourceFile &file = f.second;
 		file.to_json(j["files"]);
 
