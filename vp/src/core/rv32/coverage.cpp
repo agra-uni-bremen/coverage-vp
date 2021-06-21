@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include <system_error>
 #include <iostream>
@@ -63,25 +64,33 @@ Coverage::init(void) {
 		GElf_Addr addr;
 		const char *name;
 		uint64_t end;
-		size_t blocks;
-		Function::Location l;
 
 		name = dwfl_module_getsym_info(mod, i, &sym, &addr, NULL, NULL, NULL);
 		if (!name || GELF_ST_TYPE(sym.st_info) != STT_FUNC)
 			continue; /* not a function symbol */
 		end = (uint64_t)(addr + sym.st_size);
 
-		blocks = count_blocks(addr, end);
-		std::cout << "func: " << name << " with blocks: " << blocks << std::endl;
+		std::pair<Function::Location, Function::Location> def;
+		std::string fp = get_loc(mod, def.first, addr);
+		get_loc(mod, def.second, end - sizeof(uint32_t)); // XXX
 
-		auto fp = location_info(mod, l, addr);
-		std::cout << "\tfp: " << fp << std::endl;
+		bool newfile = files.count(fp) == 0;
+		SourceFile &sf = files[fp];
+		if (newfile)
+			sf.name = std::move(fp);
+
+		Function &f = sf.funcs[name];
+		f.name = std::string(name);
+		f.definition = def;
+		f.total_blocks = count_blocks(addr, end);
+		f.exec_blocks = 0;
+		f.exec_count = 0;
 	}
 
 	dwfl_report_end(dwfl, NULL, NULL);
 }
 
-std::string Coverage::location_info(Dwfl_Module *mod, Function::Location &loc, GElf_Addr addr) {
+std::string Coverage::get_loc(Dwfl_Module *mod, Function::Location &loc, GElf_Addr addr) {
 	Dwfl_Line *line;
 	const char *srcfp;
 	int lnum, cnum;

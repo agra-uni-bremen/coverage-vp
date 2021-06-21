@@ -17,20 +17,22 @@
 namespace rv32 {
 
 struct Function {
+public:
 	struct Location {
 		unsigned int line;
 		unsigned int column;
 	};
 
+	std::string name;
+	std::pair<Location, Location> definition;
+
 	size_t total_blocks;
 	size_t exec_blocks;
 	size_t exec_count;
-
-	std::string name;
-	std::pair<Location, Location> definition;
 };
 
-class File {
+class SourceFile {
+public:
 	std::string name;
 	std::map<std::string, Function> funcs;
 };
@@ -40,10 +42,10 @@ class Coverage {
 	Dwfl *dwfl = nullptr;
 	instr_memory_if *instr_mem = nullptr;
 
-	std::map<std::string, File> files;
+	std::map<std::string, SourceFile> files;
 
 	void init(void);
-	std::string location_info(Dwfl_Module *, Function::Location &, GElf_Addr);
+	std::string get_loc(Dwfl_Module *, Function::Location &, GElf_Addr);
 	size_t count_blocks(uint64_t, uint64_t);
 
 public:
