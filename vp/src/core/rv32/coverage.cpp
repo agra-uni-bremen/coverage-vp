@@ -64,6 +64,7 @@ Coverage::init(void) {
 		const char *name;
 		uint64_t end;
 		size_t blocks;
+		Function::Location l;
 
 		name = dwfl_module_getsym_info(mod, i, &sym, &addr, NULL, NULL, NULL);
 		if (!name || GELF_ST_TYPE(sym.st_info) != STT_FUNC)
@@ -72,11 +73,34 @@ Coverage::init(void) {
 
 		blocks = count_blocks(addr, end);
 		std::cout << "func: " << name << " with blocks: " << blocks << std::endl;
+
+		auto fp = location_info(mod, l, addr);
+		std::cout << "\tfp: " << fp << std::endl;
 	}
 
 	dwfl_report_end(dwfl, NULL, NULL);
 }
 
+std::string Coverage::location_info(Dwfl_Module *mod, Function::Location &loc, GElf_Addr addr) {
+	Dwfl_Line *line;
+	const char *srcfp;
+	int lnum, cnum;
+
+	line = dwfl_module_getsrc(mod, addr);
+	if (!line)
+		throw std::runtime_error("dwfl_module_getsrc failed");
+
+	if (!(srcfp = dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL)))
+		throw std::runtime_error("dwfl_lineinfo failed");
+
+	cnum++; /* For some reason, columns start at zero */
+	assert(lnum > 0 && cnum > 0);
+
+	loc.line = (unsigned int)lnum;
+	loc.column = (unsigned int)cnum;
+
+	return std::string(srcfp);
+}
 
 size_t Coverage::count_blocks(uint64_t addr, uint64_t end) {
 	size_t num_blocks;
