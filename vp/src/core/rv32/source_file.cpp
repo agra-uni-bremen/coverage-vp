@@ -1,4 +1,5 @@
 #include <nlohmann/json.hpp>
+#include <filesystem>
 #include <iostream>
 
 #include "coverage.h"
@@ -25,7 +26,7 @@ void SourceFile::to_json(json &out) {
 		});
 	}
 
-	j["file"] = name;
+	j["file"] = std::filesystem::path(name).filename();
 	j["lines"] = json::array();
 	j["functions"] = functions;
 

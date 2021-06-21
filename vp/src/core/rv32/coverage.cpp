@@ -9,9 +9,9 @@
 #include <stdbool.h>
 
 #include <fstream>
-#include <filesystem>
 #include <system_error>
 #include <iostream>
+#include <filesystem>
 
 using namespace rv32;
 
@@ -145,15 +145,17 @@ void Coverage::marshal(void) {
 
 	j["format_version"] = "1";
 	j["gcc_version"] = "10.3.1 20210424";
-	j["current_working_directory"] = "XXX";
-	j["data_file"] = "XXX";
 
 	nlohmann::json &jfiles = j["flies"];
 	for (auto &f : files) {
 		jfiles.clear();
+		auto path = std::filesystem::path(f.first);
 
 		SourceFile &file = f.second;
 		file.to_json(jfiles);
+
+		j["data_file"] = path.filename();
+		j["current_working_directory"] = path.parent_path();
 
 		auto fp = f.first + ".json";
 		std::ofstream out(fp);
