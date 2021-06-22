@@ -13,7 +13,7 @@ void SourceLine::to_json(json &out) {
 	j["branches"] = json::array();
 	j["count"] = exec_count;
 	j["line_number"] = definition.line;
-	j["unexecuted_block"] = exec_count == 0;
+	j["unexecuted_block"] = !blocks.visitedAll();
 	j["function_name"] = func;
 
 	out.push_back(j);

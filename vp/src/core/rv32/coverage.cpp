@@ -89,9 +89,9 @@ Coverage::init(void) {
 		Function &f = sf.funcs[name];
 		f.name = std::string(name);
 		f.definition = def;
-		f.total_blocks = count_blocks(addr, end);
 		f.exec_blocks = 0;
 		f.exec_count = 0;
+		add_lines(sf, f, addr, end);
 	}
 }
 
@@ -115,19 +115,37 @@ std::string Coverage::get_loc(Dwfl_Module *mod, Function::Location &loc, GElf_Ad
 	return std::string(srcfp);
 }
 
-size_t Coverage::count_blocks(uint64_t addr, uint64_t end) {
+void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t end) {
 	size_t num_blocks;
 	uint32_t mem_word;
 	int32_t opcode;
 	Instruction instr;
+	uint64_t bb_start, prev_addr;
 
-	/* Each function has *at least* one basic block. */
 	num_blocks = 1;
+	bb_start = addr;
 
 	while (addr < end) {
+		Dwfl_Line *line;
+		int lnum, cnum;
+
+		line = dwfl_module_getsrc(mod, addr);
+		if (!line)
+			throw std::runtime_error("dwfl_module_getsrc failed");
+		if (!dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL))
+			throw std::runtime_error("dwfl_lineinfo failed");
+
+		bool newLine = sf.lines.count(lnum) == 0;
+		SourceLine &sl = sf.lines[lnum];
+		if (newLine) {
+			sl.func = f.name;
+			sl.definition.line = (unsigned int)lnum;
+			sl.definition.column = (unsigned int)cnum;
+		}
+
+		prev_addr = addr;
 		mem_word = instr_mem->load_instr(addr);
 		instr = Instruction(mem_word);
-
 		if (instr.is_compressed()) {
 			addr += sizeof(uint16_t);
 		} else {
@@ -137,16 +155,17 @@ size_t Coverage::count_blocks(uint64_t addr, uint64_t end) {
 		opcode = instr.opcode();
 		if (opcode == Opcode::OP_JAL || opcode == Opcode::OP_BEQ) {
 			num_blocks++;
+			sl.blocks.addBlock(bb_start, prev_addr);
+			bb_start = addr;
 		}
 	}
 
-	return num_blocks;
+	f.total_blocks = num_blocks;
 }
 
 void Coverage::cover(uint64_t addr) {
 	Dwfl_Line *line;
 	int lnum, cnum;
-	const char *symbol;
 	const char *srcfp;
 
 	line = dwfl_module_getsrc(mod, addr);
@@ -161,19 +180,9 @@ void Coverage::cover(uint64_t addr) {
 		return; /* assembly file, etc */
 	SourceFile &f = files.at(name);
 
-	bool newLine = f.lines.count(lnum) == 0;
-	SourceLine &sl = f.lines[lnum];
-	if (newLine) {
-		symbol = dwfl_module_addrname(mod, (GElf_Addr)addr);
-		if (!symbol || *symbol == '\0')
-			throw std::runtime_error("dwfl_module_addrname failed");
-
-		sl.func = std::move(symbol);
-		sl.definition.line = (unsigned int)lnum;
-		sl.definition.column = (unsigned int)cnum;
-	}
-
+	SourceLine &sl = f.lines.at(lnum);
 	sl.exec_count++;
+	sl.blocks.visit(addr);
 }
 
 void Coverage::marshal(void) {
