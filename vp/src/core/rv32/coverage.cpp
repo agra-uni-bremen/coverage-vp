@@ -144,10 +144,8 @@ void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t en
 			sl.func = f.name;
 			sl.definition.line = (unsigned int)lnum;
 			sl.definition.column = (unsigned int)cnum;
+			sl.first_instr = addr;
 		}
-
-		if (addr > sl.last_instr)
-			sl.last_instr = addr;
 
 		prev_addr = addr;
 		mem_word = instr_mem->load_instr(addr);
@@ -190,7 +188,7 @@ void Coverage::cover(uint64_t addr) {
 	SourceFile &f = files.at(name);
 
 	SourceLine &sl = f.lines.at(lnum);
-	if (addr == sl.last_instr)
+	if (addr == sl.first_instr)
 		sl.exec_count++;
 
 	sl.blocks.visit(addr);
