@@ -36,6 +36,7 @@ public:
 
 class SourceLine {
 public:
+	std::string func;
 	Function::Location definition;
 	size_t exec_count = 0;
 

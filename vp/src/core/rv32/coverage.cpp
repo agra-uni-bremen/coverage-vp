@@ -146,6 +146,7 @@ size_t Coverage::count_blocks(uint64_t addr, uint64_t end) {
 void Coverage::cover(uint64_t addr) {
 	Dwfl_Line *line;
 	int lnum, cnum;
+	const char *symbol;
 	const char *srcfp;
 
 	line = dwfl_module_getsrc(mod, addr);
@@ -163,6 +164,11 @@ void Coverage::cover(uint64_t addr) {
 	bool newLine = f.lines.count(lnum) == 0;
 	SourceLine &sl = f.lines[lnum];
 	if (newLine) {
+		symbol = dwfl_module_addrname(mod, (GElf_Addr)addr);
+		if (!symbol || *symbol == '\0')
+			throw std::runtime_error("dwfl_module_addrname failed");
+
+		sl.func = std::move(symbol);
 		sl.definition.line = (unsigned int)lnum;
 		sl.definition.column = (unsigned int)cnum;
 	}
