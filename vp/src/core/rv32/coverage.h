@@ -58,6 +58,7 @@ class SourceLine {
 public:
 	std::string func;
 	Function::Location definition;
+	uint64_t last_instr = 0;
 
 	BasicBlockList blocks;
 	size_t exec_count = 0;
