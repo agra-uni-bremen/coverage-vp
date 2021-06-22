@@ -184,6 +184,9 @@ ISS::ISS(SymbolicContext &c, uint32_t hart_id, bool use_E_base_isa)
 void ISS::exec_step() {
 	assert(((pc & ~pc_alignment_mask()) == 0) && "misaligned instruction");
 
+	if (coverage)
+		coverage->cover(pc);
+
 	try {
 		uint32_t mem_word = instr_mem->load_instr(pc);
 		instr = Instruction(mem_word);

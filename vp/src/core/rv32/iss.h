@@ -39,6 +39,7 @@
 
 #pragma once
 
+#include "coverage.h"
 #include "core/common/bus_lock_if.h"
 #include "core/common/clint_if.h"
 #include "core/common/instr.h"
@@ -216,6 +217,7 @@ struct ISS : public external_interrupt_target, public clint_interrupt_target, pu
 	PrivilegeLevel prv = MachineMode;
 	int64_t lr_sc_counter = 0;
 	uint64_t total_num_instr = 0;
+	Coverage *coverage;
 
 	// last decoded and executed instruction and opcode
 	Instruction instr;

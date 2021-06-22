@@ -36,6 +36,9 @@ Coverage::Coverage(std::string path, instr_memory_if *_instr_mem)
 	if (!(dwfl = dwfl_begin(&offline_callbacks)))
 		throw std::runtime_error("dwfl_begin failed");
 
+	if (!(mod = dwfl_report_offline(dwfl, "main", "main", fd)))
+		throw std::runtime_error("dwfl_report_offline failed");
+
 	init();
 }
 
@@ -43,6 +46,11 @@ Coverage::~Coverage(void) {
 	if (fd >= 0) {
 		close(fd);
 		fd = -1;
+	}
+
+	if (mod) {
+		dwfl_report_end(dwfl, NULL, NULL);
+		mod = nullptr;
 	}
 
 	if (dwfl) {
@@ -54,10 +62,7 @@ Coverage::~Coverage(void) {
 void
 Coverage::init(void) {
 	int n;
-	Dwfl_Module *mod;
 
-	if (!(mod = dwfl_report_offline(dwfl, "main", "main", fd)))
-		throw std::runtime_error("dwfl_report_offline failed");
 	if ((n = dwfl_module_getsymtab(mod)) == -1)
 		throw std::runtime_error("dwfl_module_getsymtab failed");
 
@@ -88,8 +93,6 @@ Coverage::init(void) {
 		f.exec_blocks = 0;
 		f.exec_count = 0;
 	}
-
-	dwfl_report_end(dwfl, NULL, NULL);
 }
 
 std::string Coverage::get_loc(Dwfl_Module *mod, Function::Location &loc, GElf_Addr addr) {
@@ -140,6 +143,33 @@ size_t Coverage::count_blocks(uint64_t addr, uint64_t end) {
 	return num_blocks;
 }
 
+void Coverage::cover(uint64_t addr) {
+	Dwfl_Line *line;
+	int lnum, cnum;
+	const char *srcfp;
+
+	line = dwfl_module_getsrc(mod, addr);
+	if (!line)
+		throw std::runtime_error("dwfl_module_getsrc failed");
+
+	if (!(srcfp = dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL)))
+		throw std::runtime_error("dwfl_lineinfo failed");
+
+	std::string name = std::string(srcfp);
+	if (files.count(name) == 0)
+		return; /* assembly file, etc */
+	SourceFile &f = files.at(name);
+
+	bool newLine = f.lines.count(lnum) == 0;
+	SourceLine &sl = f.lines[lnum];
+	if (newLine) {
+		sl.definition.line = (unsigned int)lnum;
+		sl.definition.column = (unsigned int)cnum;
+	}
+
+	sl.exec_count++;
+}
+
 void Coverage::marshal(void) {
 	nlohmann::json j;
 
@@ -164,5 +194,4 @@ void Coverage::marshal(void) {
 
 		out << std::setw(4) << j << std::endl;
 	}
-
 }

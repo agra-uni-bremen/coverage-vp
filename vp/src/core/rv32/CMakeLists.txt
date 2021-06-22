@@ -4,7 +4,7 @@ add_library(rv32
 		iss.cpp
 		syscall.cpp
 		coverage.cpp
-		source_file.cpp
+		json.cpp
         ${HEADERS})
 
 target_link_libraries(rv32 symex core-common ${SoftFloat_LIBRARIES}

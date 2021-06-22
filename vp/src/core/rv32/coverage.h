@@ -30,6 +30,16 @@ public:
 	size_t total_blocks;
 	size_t exec_blocks;
 	size_t exec_count;
+
+	void to_json(nlohmann::json &);
+};
+
+class SourceLine {
+public:
+	Function::Location definition;
+	size_t exec_count = 0;
+
+	void to_json(nlohmann::json &);
 };
 
 class SourceFile {
@@ -37,7 +47,9 @@ class SourceFile {
 
 private:
 	std::string name;
+
 	std::map<std::string, Function> funcs;
+	std::map<int, SourceLine> lines;
 
 	void to_json(nlohmann::json &);
 };
@@ -45,6 +57,7 @@ private:
 class Coverage {
 	int fd = -1;
 	Dwfl *dwfl = nullptr;
+	Dwfl_Module *mod = nullptr;
 	instr_memory_if *instr_mem = nullptr;
 
 	std::map<std::string, SourceFile> files;
@@ -57,6 +70,7 @@ public:
 	Coverage(std::string path, instr_memory_if *_instr_mem);
 	~Coverage(void);
 
+	void cover(uint64_t addr);
 	void marshal(void);
 };
 
