@@ -1,14 +1,17 @@
-#include "coverage.h"
+#include <assert.h>
 #include <iostream>
+
+#include "coverage.h"
 
 using namespace rv32;
 
-void BasicBlockList::addBlock(uint64_t start, uint64_t end) {
+void BasicBlockList::add(uint64_t start, uint64_t end) {
 	blocks.push_back(BasicBlock(start, end));
 }
 
 // TODO: Use binary search
 void BasicBlockList::visit(uint64_t addr) {
+	assert(!blocks.empty());
 	for (auto &block : blocks) {
 		if (addr >= block.start && addr < block.end) {
 			block.visited = true;
@@ -20,6 +23,7 @@ void BasicBlockList::visit(uint64_t addr) {
 }
 
 bool BasicBlockList::visitedAll(void) {
+	assert(!blocks.empty());
 	for (auto &block : blocks) {
 		if (!block.visited) {
 			return false;

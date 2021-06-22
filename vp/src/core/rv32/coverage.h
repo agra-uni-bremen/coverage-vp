@@ -48,7 +48,7 @@ private:
 	std::vector<BasicBlock> blocks;
 
 public:
-	void addBlock(uint64_t start, uint64_t end);
+	void add(uint64_t start, uint64_t end);
 
 	void visit(uint64_t addr);
 	bool visitedAll(void);

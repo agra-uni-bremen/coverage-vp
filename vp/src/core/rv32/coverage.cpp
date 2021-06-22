@@ -155,8 +155,11 @@ void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t en
 		opcode = instr.opcode();
 		if (opcode == Opcode::OP_JAL || opcode == Opcode::OP_BEQ) {
 			num_blocks++;
-			sl.blocks.addBlock(bb_start, prev_addr);
+			sl.blocks.add(bb_start, prev_addr);
 			bb_start = addr;
+		} else if (newLine) {
+			// Ensure that each line has *at least* one block
+			sl.blocks.add(prev_addr, addr);
 		}
 	}
 
