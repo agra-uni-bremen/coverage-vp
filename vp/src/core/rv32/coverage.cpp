@@ -13,6 +13,9 @@
 #include <iostream>
 #include <filesystem>
 
+#include <boost/iostreams/filtering_streambuf.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+
 using namespace rv32;
 
 /* Taken from elfutils example code. */
@@ -210,11 +213,16 @@ void Coverage::marshal(void) {
 		j["data_file"] = path.filename();
 		j["current_working_directory"] = path.parent_path();
 
-		auto fp = f.first + ".json";
-		std::ofstream out(fp);
-		if (!out.is_open())
+		auto fp = f.first + ".json.gz";
+		std::ofstream fout(fp);
+		if (!fout.is_open())
 			throw std::runtime_error("failed to open " + std::string(fp));
 
+		boost::iostreams::filtering_streambuf<boost::iostreams::output> gzstr;
+		gzstr.push(boost::iostreams::gzip_compressor());
+		gzstr.push(fout);
+
+		std::ostream out(&gzstr);
 		out << std::setw(4) << j << std::endl;
 	}
 }
