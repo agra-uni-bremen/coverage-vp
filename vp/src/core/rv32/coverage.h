@@ -26,6 +26,7 @@ public:
 
 	std::string name;
 	std::pair<Location, Location> definition;
+	uint64_t first_instr;
 
 	size_t total_blocks;
 	size_t exec_blocks;

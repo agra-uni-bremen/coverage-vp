@@ -91,6 +91,7 @@ Coverage::init(void) {
 
 		Function &f = sf.funcs[name];
 		f.name = std::string(name);
+		f.first_instr = addr;
 		f.definition = def;
 		f.exec_blocks = 0;
 		f.exec_count = 0;
@@ -173,7 +174,7 @@ void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t en
 void Coverage::cover(uint64_t addr) {
 	Dwfl_Line *line;
 	int lnum, cnum;
-	const char *srcfp;
+	const char *srcfp, *symbol;
 
 	line = dwfl_module_getsrc(mod, addr);
 	if (!line)
@@ -186,6 +187,12 @@ void Coverage::cover(uint64_t addr) {
 	if (files.count(name) == 0)
 		return; /* assembly file, etc */
 	SourceFile &f = files.at(name);
+
+	if (!(symbol = dwfl_module_addrname(mod, addr)))
+		throw std::runtime_error("dwfl_module_addrname failed");
+	Function &func = f.funcs.at(symbol);
+	if (addr == func.first_instr)
+		func.exec_count++;
 
 	SourceLine &sl = f.lines.at(lnum);
 	if (addr == sl.first_instr)
