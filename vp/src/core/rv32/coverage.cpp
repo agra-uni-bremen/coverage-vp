@@ -213,7 +213,7 @@ void Coverage::marshal(void) {
 		j["data_file"] = path.filename();
 		j["current_working_directory"] = path.parent_path();
 
-		auto fp = f.first + ".json.gz";
+		auto fp = f.first + ".gcov.json.gz";
 		std::ofstream fout(fp);
 		if (!fout.is_open())
 			throw std::runtime_error("failed to open " + std::string(fp));
