@@ -29,6 +29,9 @@ static const Dwfl_Callbacks offline_callbacks = (Dwfl_Callbacks){
 };
 
 #define ARCH RV32
+#define FORMAT_VERSION "1"
+#define GCC_VERSION "10.3.1 20210424"
+#define FILE_EXT ".gcov.json.gz"
 
 Coverage::Coverage(std::string path, instr_memory_if *_instr_mem)
   : instr_mem(_instr_mem) {
@@ -204,8 +207,8 @@ void Coverage::cover(uint64_t addr) {
 void Coverage::marshal(void) {
 	nlohmann::json j;
 
-	j["format_version"] = "1";
-	j["gcc_version"] = "10.3.1 20210424";
+	j["format_version"] = FORMAT_VERSION;
+	j["gcc_version"] = GCC_VERSION;
 
 	nlohmann::json &jfiles = j["files"];
 	for (auto &f : files) {
@@ -218,7 +221,7 @@ void Coverage::marshal(void) {
 		j["data_file"] = path.filename();
 		j["current_working_directory"] = path.parent_path();
 
-		auto fp = f.first + ".gcov.json.gz";
+		auto fp = f.first + FILE_EXT;
 		std::ofstream fout(fp);
 		if (!fout.is_open())
 			throw std::runtime_error("failed to open " + std::string(fp));
