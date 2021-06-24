@@ -20,7 +20,7 @@ namespace rv32 {
 class BasicBlock {
 public:
 	uint64_t start, end;
-	bool visited;
+	bool visited = false;
 
 	BasicBlock(uint64_t _start, uint64_t _end)
 		: start(_start), end(_end), visited(false) {}
