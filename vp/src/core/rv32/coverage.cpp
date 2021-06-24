@@ -157,7 +157,7 @@ void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t en
 		}
 
 		opcode = instr.opcode();
-		if (opcode == Opcode::OP_JAL || opcode == Opcode::OP_BEQ) {
+		if (opcode == Opcode::OP_JAL || opcode == Opcode::OP_JALR || opcode == Opcode::OP_BEQ) {
 			bb = f.blocks.add(bb_start, addr);
 			sl.blocks.push_back(bb);
 			bb_start = addr;
