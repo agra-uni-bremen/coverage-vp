@@ -17,26 +17,8 @@
 
 namespace rv32 {
 
-struct Function {
-public:
-	struct Location {
-		unsigned int line;
-		unsigned int column;
-	};
-
-	std::string name;
-	std::pair<Location, Location> definition;
-	uint64_t first_instr;
-
-	size_t total_blocks;
-	size_t exec_blocks;
-	size_t exec_count;
-
-	void to_json(nlohmann::json &);
-};
-
 class BasicBlockList {
-private:
+public:
 	class BasicBlock {
 	public:
 		uint64_t start, end;
@@ -48,20 +30,39 @@ private:
 
 	std::vector<BasicBlock> blocks;
 
-public:
-	void add(uint64_t start, uint64_t end);
-
+	BasicBlock* add(uint64_t start, uint64_t end);
 	void visit(uint64_t addr);
-	bool visitedAll(void);
+
+	size_t size(void);
+	size_t visited(void);
+};
+
+struct Function {
+public:
+	struct Location {
+		unsigned int line;
+		unsigned int column;
+	};
+
+	std::string name;
+	std::pair<Location, Location> definition;
+	BasicBlockList blocks;
+
+	uint64_t first_instr;
+	size_t exec_count;
+
+	void to_json(nlohmann::json &);
 };
 
 class SourceLine {
 public:
-	std::string func;
+	Function* func;
 	Function::Location definition;
-	uint64_t first_instr;
 
-	BasicBlockList blocks;
+	// References to BasicBlockList elements of func.
+	std::vector<BasicBlockList::BasicBlock*> blocks;
+
+	uint64_t first_instr;
 	size_t exec_count = 0;
 
 	void to_json(nlohmann::json &);

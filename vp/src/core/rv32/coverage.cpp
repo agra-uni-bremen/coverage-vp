@@ -96,7 +96,6 @@ Coverage::init(void) {
 		f.name = std::string(name);
 		f.first_instr = addr;
 		f.definition = def;
-		f.exec_blocks = 0;
 		f.exec_count = 0;
 		add_lines(sf, f, addr, end);
 	}
@@ -123,18 +122,16 @@ std::string Coverage::get_loc(Dwfl_Module *mod, Function::Location &loc, GElf_Ad
 }
 
 void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t end) {
-	size_t num_blocks;
 	uint32_t mem_word;
 	int32_t opcode;
 	Instruction instr;
-	uint64_t bb_start, prev_addr;
+	uint64_t bb_start;
 
-	num_blocks = 1;
 	bb_start = addr;
-
 	while (addr < end) {
 		Dwfl_Line *line;
 		int lnum, cnum;
+		BasicBlockList::BasicBlock *bb;
 
 		line = dwfl_module_getsrc(mod, addr);
 		if (!line)
@@ -145,13 +142,12 @@ void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t en
 		bool newLine = sf.lines.count(lnum) == 0;
 		SourceLine &sl = sf.lines[lnum];
 		if (newLine) {
-			sl.func = f.name;
+			sl.func = &f;
 			sl.definition.line = (unsigned int)lnum;
 			sl.definition.column = (unsigned int)cnum;
 			sl.first_instr = addr;
 		}
 
-		prev_addr = addr;
 		mem_word = instr_mem->load_instr(addr);
 		instr = Instruction(mem_word);
 		if (instr.is_compressed()) {
@@ -162,16 +158,11 @@ void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t en
 
 		opcode = instr.opcode();
 		if (opcode == Opcode::OP_JAL || opcode == Opcode::OP_BEQ) {
-			num_blocks++;
-			sl.blocks.add(bb_start, prev_addr);
+			bb = f.blocks.add(bb_start, addr);
+			sl.blocks.push_back(bb);
 			bb_start = addr;
-		} else if (newLine) {
-			// Ensure that each line has *at least* one block
-			sl.blocks.add(prev_addr, addr);
 		}
 	}
-
-	f.total_blocks = num_blocks;
 }
 
 void Coverage::cover(uint64_t addr) {
@@ -182,7 +173,6 @@ void Coverage::cover(uint64_t addr) {
 	line = dwfl_module_getsrc(mod, addr);
 	if (!line)
 		throw std::runtime_error("dwfl_module_getsrc failed");
-
 	if (!(srcfp = dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL)))
 		throw std::runtime_error("dwfl_lineinfo failed");
 
@@ -193,15 +183,15 @@ void Coverage::cover(uint64_t addr) {
 
 	if (!(symbol = dwfl_module_addrname(mod, addr)))
 		throw std::runtime_error("dwfl_module_addrname failed");
+
 	Function &func = f.funcs.at(symbol);
 	if (addr == func.first_instr)
 		func.exec_count++;
+	func.blocks.visit(addr);
 
 	SourceLine &sl = f.lines.at(lnum);
 	if (addr == sl.first_instr)
 		sl.exec_count++;
-
-	sl.blocks.visit(addr);
 }
 
 void Coverage::marshal(void) {

@@ -9,20 +9,29 @@ using namespace nlohmann;
 
 void SourceLine::to_json(json &out) {
 	json j;
+	auto has_unexecuted_block = [this](void) {
+		if (exec_count == 0)
+			return true;
+
+		for (auto block : blocks)
+			if (!block->visited) return true;
+
+		return false;
+	};
 
 	j["branches"] = json::array();
 	j["count"] = exec_count;
 	j["line_number"] = definition.line;
-	j["unexecuted_block"] = !blocks.visitedAll();
-	j["function_name"] = func;
+	j["unexecuted_block"] = has_unexecuted_block();
+	j["function_name"] = func->name;
 
 	out.push_back(j);
 }
 
 void Function::to_json(json &out) {
 	out.push_back({
-		{"blocks", total_blocks},
-		{"blocks_executed", exec_blocks},
+		{"blocks", blocks.size()},
+		{"blocks_executed", blocks.visited()},
 		{"demangled_name", name},
 		{"end_column", definition.second.column},
 		{"end_line", definition.second.line},
