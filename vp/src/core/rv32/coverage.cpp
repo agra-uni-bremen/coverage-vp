@@ -33,6 +33,12 @@ static const Dwfl_Callbacks offline_callbacks = (Dwfl_Callbacks){
 #define GCC_VERSION "10.3.1 20210424"
 #define FILE_EXT ".gcov.json.gz"
 
+/* True if the instruction ends a basic block. */
+static inline bool basic_block_end(Instruction &i) {
+	int32_t o = i.opcode();
+	return o == Opcode::OP_JAL || o == Opcode::OP_JALR || o == Opcode::OP_BEQ;
+}
+
 Coverage::Coverage(std::string path, instr_memory_if *_instr_mem)
   : instr_mem(_instr_mem) {
 	const char *fn = path.c_str();
@@ -123,7 +129,6 @@ std::string Coverage::get_loc(Dwfl_Module *mod, Function::Location &loc, GElf_Ad
 
 void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t end) {
 	uint32_t mem_word;
-	int32_t opcode;
 	Instruction instr;
 	uint64_t bb_start;
 
@@ -156,8 +161,7 @@ void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t en
 			addr += sizeof(uint32_t);
 		}
 
-		opcode = instr.opcode();
-		if (opcode == Opcode::OP_JAL || opcode == Opcode::OP_JALR || opcode == Opcode::OP_BEQ) {
+		if (basic_block_end(instr)) {
 			bb = f.blocks.add(bb_start, addr);
 			sl.blocks.push_back(bb);
 			bb_start = addr;
