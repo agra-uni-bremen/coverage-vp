@@ -123,7 +123,8 @@ std::string Coverage::get_loc(Dwfl_Module *mod, Function::Location &loc, GElf_Ad
 
 /* https://en.wikipedia.org/wiki/Basic_block#Creation_algorithm */
 std::map<uint64_t, bool> Coverage::get_block_leaders(uint64_t func_start, uint64_t func_end) {
-	uint64_t addr, prev_addr;
+	uint64_t addr;
+	bool prev_wasjump = false;
 	std::map<uint64_t, bool> leaders;
 
 	/* The first instruction is always a leader */
@@ -131,29 +132,33 @@ std::map<uint64_t, bool> Coverage::get_block_leaders(uint64_t func_start, uint64
 
 	addr = func_start;
 	while (addr < func_end) {
-		prev_addr = addr;
+		// Instruction that immediately follows a (un)conditional jump/branch is a leader
+		if (prev_wasjump)
+			leaders[addr] = true;
+		prev_wasjump = false;
+
 		uint32_t mem_word = instr_mem->load_instr(addr);
 		Instruction instr = Instruction(mem_word);
+
+		// TODO: decode_and_expand_compressed for compressed
+		int32_t o = instr.opcode();
+		if (o == Opcode::OP_BEQ) {
+			leaders[addr + instr.B_imm()] = true;
+		} else if (o == Opcode::OP_JAL) {
+			leaders[addr + instr.J_imm()] = true;
+		} else if (o == Opcode::OP_JALR) {
+			// XXX: not implemented → assuming target is a different function
+		} else {
+			goto next;
+		}
+		prev_wasjump = true;
+
+next:
 		if (instr.is_compressed()) {
 			addr += sizeof(uint16_t);
 		} else {
 			addr += sizeof(uint32_t);
 		}
-
-		// TODO: decode_and_expand_compressed for compressed
-		int32_t o = instr.opcode();
-		if (o == Opcode::OP_BEQ) {
-			leaders[prev_addr + instr.B_imm()] = true;
-		} else if (o == Opcode::OP_JAL) {
-			leaders[prev_addr + instr.J_imm()] = true;
-		} else if (o == Opcode::OP_JALR) {
-			// XXX: not implemented → assuming target is a different function
-		} else {
-			continue;
-		}
-
-		// Instruction that immediately follows a (un)conditional jump/branch is a leader
-		leaders[addr] = true;
 	}
 
 	return leaders;
