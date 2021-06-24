@@ -92,6 +92,7 @@ class Coverage {
 
 	void init(void);
 	std::string get_loc(Dwfl_Module *, Function::Location &, GElf_Addr);
+	std::map<uint64_t, bool> get_block_leaders(uint64_t, uint64_t);
 	void add_lines(SourceFile &, Function &f, uint64_t, uint64_t);
 
 public:

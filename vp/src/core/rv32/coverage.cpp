@@ -127,48 +127,83 @@ std::string Coverage::get_loc(Dwfl_Module *mod, Function::Location &loc, GElf_Ad
 	return std::string(srcfp);
 }
 
-void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t end) {
-	uint32_t mem_word;
-	Instruction instr;
-	uint64_t bb_start, prev_addr;
+/* https://en.wikipedia.org/wiki/Basic_block#Creation_algorithm */
+std::map<uint64_t, bool> Coverage::get_block_leaders(uint64_t func_start, uint64_t func_end) {
+	uint64_t addr, prev_addr;
+	std::map<uint64_t, bool> leaders;
 
-	prev_addr = bb_start = addr;
-	while (addr < end) {
-		Dwfl_Line *line;
-		int lnum, cnum;
+	/* The first instruction is always a leader */
+	leaders[func_start] = true;
 
-		line = dwfl_module_getsrc(mod, addr);
-		if (!line)
-			throw std::runtime_error("dwfl_module_getsrc failed");
-		if (!dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL))
-			throw std::runtime_error("dwfl_lineinfo failed");
-
-		bool newLine = sf.lines.count(lnum) == 0;
-		SourceLine &sl = sf.lines[lnum];
-		if (newLine) {
-			sl.func = &f;
-			sl.definition.line = (unsigned int)lnum;
-			sl.definition.column = (unsigned int)cnum;
-			sl.first_instr = addr;
-		}
-
+	addr = func_start;
+	while (addr < func_end) {
 		prev_addr = addr;
-		mem_word = instr_mem->load_instr(addr);
-		instr = Instruction(mem_word);
+		uint32_t mem_word = instr_mem->load_instr(addr);
+		Instruction instr = Instruction(mem_word);
 		if (instr.is_compressed()) {
 			addr += sizeof(uint16_t);
 		} else {
 			addr += sizeof(uint32_t);
 		}
 
-		if (basic_block_end(instr) || addr >= end) {
-			if (addr >= end)
-				prev_addr = end;
-
-			std::unique_ptr<BasicBlock> bb = f.blocks.add(bb_start, prev_addr);
-			sl.blocks.push_back(std::move(bb));
-			bb_start = addr;
+		// TODO: decode_and_expand_compressed for compressed
+		int32_t o = instr.opcode();
+		if (o == Opcode::OP_BEQ) {
+			leaders[prev_addr + instr.B_imm()] = true;
+		} else if (o == Opcode::OP_JAL) {
+			leaders[prev_addr + instr.J_imm()] = true;
+		} else if (o == Opcode::OP_JAL) {
+			// XXX: not implemented → assuming target is a different function
+		} else {
+			continue;
 		}
+
+		// Instruction that immediately follows a (un)conditional jump/branch is a leader
+		leaders[addr] = true;
+	}
+
+	return leaders;
+}
+
+void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t func_start, uint64_t func_end) {
+	SourceLine *sl = nullptr;
+	auto leaders = get_block_leaders(func_start, func_end);
+	uint64_t addr = func_start;
+
+	for (auto leader : leaders) {
+		uint64_t prev_addr;
+
+		do {
+			Dwfl_Line *line;
+			int lnum, cnum;
+
+			line = dwfl_module_getsrc(mod, addr);
+			if (!line)
+				throw std::runtime_error("dwfl_module_getsrc failed");
+			if (!dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL))
+				throw std::runtime_error("dwfl_lineinfo failed");
+
+			bool newLine = sf.lines.count(lnum) == 0;
+			sl = &sf.lines[lnum];
+			if (newLine) {
+				sl->func = &f;
+				sl->definition.line = (unsigned int)lnum;
+				sl->definition.column = (unsigned int)cnum;
+				sl->first_instr = addr;
+			}
+
+			prev_addr = addr;
+			uint32_t mem_word = instr_mem->load_instr(addr);
+			Instruction instr = Instruction(mem_word);
+			if (instr.is_compressed()) {
+				addr += sizeof(uint16_t);
+			} else {
+				addr += sizeof(uint32_t);
+			}
+		} while (leaders.count(addr) == 0 && addr < func_end);
+
+		std::unique_ptr<BasicBlock> bb = f.blocks.add(leader.first, prev_addr);
+		sl->blocks.push_back(std::move(bb));
 	}
 }
 
