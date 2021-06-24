@@ -17,19 +17,20 @@
 
 namespace rv32 {
 
-class BasicBlockList {
+class BasicBlock {
 public:
-	class BasicBlock {
-	public:
-		uint64_t start, end;
-		bool visited;
+	uint64_t start, end;
+	bool visited;
 
-		BasicBlock(uint64_t _start, uint64_t _end)
-		  : start(_start), end(_end), visited(false) {}
-	};
+	BasicBlock(uint64_t _start, uint64_t _end)
+		: start(_start), end(_end), visited(false) {}
+};
 
+class BasicBlockList {
+private:
 	std::vector<BasicBlock> blocks;
 
+public:
 	BasicBlock* add(uint64_t start, uint64_t end);
 	void visit(uint64_t addr);
 
@@ -60,7 +61,7 @@ public:
 	Function::Location definition;
 
 	// References to BasicBlockList elements of func.
-	std::vector<BasicBlockList::BasicBlock*> blocks;
+	std::vector<BasicBlock*> blocks;
 
 	uint64_t first_instr;
 	size_t exec_count = 0;

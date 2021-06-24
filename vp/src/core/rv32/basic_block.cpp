@@ -5,7 +5,7 @@
 
 using namespace rv32;
 
-BasicBlockList::BasicBlock* BasicBlockList::add(uint64_t start, uint64_t end) {
+BasicBlock* BasicBlockList::add(uint64_t start, uint64_t end) {
 	blocks.push_back(BasicBlock(start, end));
 	return &blocks.back();
 }

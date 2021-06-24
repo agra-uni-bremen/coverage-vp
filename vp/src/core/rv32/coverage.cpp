@@ -131,7 +131,7 @@ void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t en
 	while (addr < end) {
 		Dwfl_Line *line;
 		int lnum, cnum;
-		BasicBlockList::BasicBlock *bb;
+		BasicBlock *bb;
 
 		line = dwfl_module_getsrc(mod, addr);
 		if (!line)
