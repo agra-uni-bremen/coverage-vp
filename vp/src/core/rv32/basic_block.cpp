@@ -12,7 +12,7 @@ std::unique_ptr<BasicBlock> BasicBlockList::add(uint64_t start, uint64_t end) {
 // TODO: Use binary search
 void BasicBlockList::visit(uint64_t addr) {
 	for (auto &block : blocks) {
-		if (addr >= block.start && addr < block.end) {
+		if (addr >= block.start && addr <= block.end) {
 			block.visited = true;
 			return;
 		}

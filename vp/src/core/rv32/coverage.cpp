@@ -130,9 +130,9 @@ std::string Coverage::get_loc(Dwfl_Module *mod, Function::Location &loc, GElf_Ad
 void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t end) {
 	uint32_t mem_word;
 	Instruction instr;
-	uint64_t bb_start;
+	uint64_t bb_start, prev_addr;
 
-	bb_start = addr;
+	prev_addr = bb_start = addr;
 	while (addr < end) {
 		Dwfl_Line *line;
 		int lnum, cnum;
@@ -152,6 +152,7 @@ void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t en
 			sl.first_instr = addr;
 		}
 
+		prev_addr = addr;
 		mem_word = instr_mem->load_instr(addr);
 		instr = Instruction(mem_word);
 		if (instr.is_compressed()) {
@@ -161,7 +162,10 @@ void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t en
 		}
 
 		if (basic_block_end(instr) || addr >= end) {
-			std::unique_ptr<BasicBlock> bb = f.blocks.add(bb_start, addr);
+			if (addr >= end)
+				prev_addr = end;
+
+			std::unique_ptr<BasicBlock> bb = f.blocks.add(bb_start, prev_addr);
 			sl.blocks.push_back(std::move(bb));
 			bb_start = addr;
 		}
