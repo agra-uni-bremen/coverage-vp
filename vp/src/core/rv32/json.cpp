@@ -16,7 +16,7 @@ void SourceLine::to_json(json &out) {
 			return true;
 
 		for (size_t i = 0; i < blocks.size(); i++) {
-			if (blocks[i]->visited)
+			if (!blocks[i]->visited)
 				return true;
 		}
 
