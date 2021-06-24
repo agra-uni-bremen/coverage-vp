@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <nlohmann/json.hpp>
 #include <filesystem>
 #include <iostream>
@@ -9,12 +10,15 @@ using namespace nlohmann;
 
 void SourceLine::to_json(json &out) {
 	json j;
+
 	auto has_unexecuted_block = [this](void) {
 		if (exec_count == 0)
 			return true;
 
-		for (auto block : blocks)
-			if (!block->visited) return true;
+		for (size_t i = 0; i < blocks.size(); i++) {
+			if (blocks[i]->visited)
+				return true;
+		}
 
 		return false;
 	};

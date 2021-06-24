@@ -136,7 +136,6 @@ void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t en
 	while (addr < end) {
 		Dwfl_Line *line;
 		int lnum, cnum;
-		BasicBlock *bb;
 
 		line = dwfl_module_getsrc(mod, addr);
 		if (!line)
@@ -162,8 +161,8 @@ void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t en
 		}
 
 		if (basic_block_end(instr) || addr >= end) {
-			bb = f.blocks.add(bb_start, addr);
-			sl.blocks.push_back(bb);
+			std::unique_ptr<BasicBlock> bb = f.blocks.add(bb_start, addr);
+			sl.blocks.push_back(std::move(bb));
 			bb_start = addr;
 		}
 	}

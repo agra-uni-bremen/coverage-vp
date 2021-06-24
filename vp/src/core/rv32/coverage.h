@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 #include <utility>
+#include <memory>
 
 #include <nlohmann/json.hpp>
 #include <elfutils/libdwfl.h>
@@ -31,7 +32,7 @@ private:
 	std::vector<BasicBlock> blocks;
 
 public:
-	BasicBlock* add(uint64_t start, uint64_t end);
+	std::unique_ptr<BasicBlock> add(uint64_t start, uint64_t end);
 	void visit(uint64_t addr);
 
 	size_t size(void);
@@ -61,7 +62,7 @@ public:
 	Function::Location definition;
 
 	// References to BasicBlockList elements of func.
-	std::vector<BasicBlock*> blocks;
+	std::vector<std::unique_ptr<BasicBlock>> blocks;
 
 	uint64_t first_instr;
 	size_t exec_count = 0;

@@ -5,9 +5,8 @@
 
 using namespace rv32;
 
-BasicBlock* BasicBlockList::add(uint64_t start, uint64_t end) {
-	blocks.push_back(BasicBlock(start, end));
-	return &blocks.back();
+std::unique_ptr<BasicBlock> BasicBlockList::add(uint64_t start, uint64_t end) {
+	return std::make_unique<BasicBlock>(blocks.emplace_back(BasicBlock(start, end)));
 }
 
 // TODO: Use binary search
