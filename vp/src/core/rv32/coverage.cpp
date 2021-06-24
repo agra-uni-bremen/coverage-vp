@@ -161,7 +161,7 @@ void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t addr, uint64_t en
 			addr += sizeof(uint32_t);
 		}
 
-		if (basic_block_end(instr)) {
+		if (basic_block_end(instr) || addr >= end) {
 			bb = f.blocks.add(bb_start, addr);
 			sl.blocks.push_back(bb);
 			bb_start = addr;
