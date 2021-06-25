@@ -33,12 +33,6 @@ static const Dwfl_Callbacks offline_callbacks = (Dwfl_Callbacks){
 #define GCC_VERSION "10.3.1 20210424"
 #define FILE_EXT ".gcov.json.gz"
 
-/* True if the instruction ends a basic block. */
-static inline bool basic_block_end(Instruction &i) {
-	int32_t o = i.opcode();
-	return o == Opcode::OP_JAL || o == Opcode::OP_JALR || o == Opcode::OP_BEQ;
-}
-
 Coverage::Coverage(std::string path, instr_memory_if *_instr_mem)
   : instr_mem(_instr_mem) {
 	const char *fn = path.c_str();
