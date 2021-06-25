@@ -75,7 +75,8 @@ Coverage::init(void) {
 	for (int i = 0; i < n; i++) {
 		GElf_Sym sym;
 		GElf_Addr addr;
-		const char *name;
+		const char *name, *srcfp;
+		Dwfl_Line *line;
 		uint64_t end;
 
 		name = dwfl_module_getsym_info(mod, i, &sym, &addr, NULL, NULL, NULL);
@@ -83,10 +84,13 @@ Coverage::init(void) {
 			continue; /* not a function symbol */
 		end = (uint64_t)(addr + sym.st_size);
 
-		std::pair<Function::Location, Function::Location> def;
-		std::string fp = get_loc(mod, def.first, addr);
-		get_loc(mod, def.second, end - sizeof(uint32_t)); // XXX
+		line = dwfl_module_getsrc(mod, addr);
+		if (!line)
+			throw std::runtime_error("dwfl_module_getsrc failed");
+		if (!(srcfp = dwfl_lineinfo(line, NULL, NULL, NULL, NULL, NULL)))
+			throw std::runtime_error("dwfl_lineinfo failed");
 
+		std::string fp = std::string(srcfp);
 		bool newfile = files.count(fp) == 0;
 		SourceFile &sf = files[fp];
 		if (newfile)
@@ -95,30 +99,56 @@ Coverage::init(void) {
 		Function &f = sf.funcs[name];
 		f.name = std::string(name);
 		f.first_instr = addr;
-		f.definition = def;
-		f.exec_count = 0;
-		add_lines(sf, f, addr, end);
+		init_lines(sf, f, addr, end);
 	}
 }
 
-std::string Coverage::get_loc(Dwfl_Module *mod, Function::Location &loc, GElf_Addr addr) {
-	Dwfl_Line *line;
-	const char *srcfp;
-	int lnum, cnum;
+void Coverage::init_lines(SourceFile &sf, Function &f, uint64_t func_start, uint64_t func_end) {
+	SourceLine *sl = nullptr, *first_sl = nullptr;
+	auto leaders = get_block_leaders(func_start, func_end);
+	uint64_t addr = func_start;
 
-	line = dwfl_module_getsrc(mod, addr);
-	if (!line)
-		throw std::runtime_error("dwfl_module_getsrc failed");
+	for (auto leader : leaders) {
+		uint64_t prev_addr;
 
-	if (!(srcfp = dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL)))
-		throw std::runtime_error("dwfl_lineinfo failed");
+		do {
+			Dwfl_Line *line;
+			int lnum, cnum;
 
-	assert(lnum > 0 && cnum > 0);
+			line = dwfl_module_getsrc(mod, addr);
+			if (!line)
+				throw std::runtime_error("dwfl_module_getsrc failed");
+			if (!dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL))
+				throw std::runtime_error("dwfl_lineinfo failed");
 
-	loc.line = (unsigned int)lnum;
-	loc.column = (unsigned int)cnum;
+			bool newLine = sf.lines.count(lnum) == 0;
+			sl = &sf.lines[lnum];
+			if (newLine) {
+				sl->func = &f;
+				sl->definition.line = (unsigned int)lnum;
+				sl->definition.column = (unsigned int)cnum;
+				sl->first_instr = addr;
+			}
 
-	return std::string(srcfp);
+			if (!first_sl)
+				first_sl = sl;
+
+			prev_addr = addr;
+			uint32_t mem_word = instr_mem->load_instr(addr);
+			Instruction instr = Instruction(mem_word);
+			if (instr.is_compressed()) {
+				addr += sizeof(uint16_t);
+			} else {
+				addr += sizeof(uint32_t);
+			}
+		} while (leaders.count(addr) == 0 && addr < func_end);
+
+		BasicBlock *bb = f.blocks.add(leader.first, prev_addr);
+		sl->blocks.push_back(bb);
+	}
+
+	/* Set function location based on gathered line information */
+	f.definition = std::make_pair(first_sl->definition, sl->definition);
 }
 
 /* https://en.wikipedia.org/wiki/Basic_block#Creation_algorithm */
@@ -162,48 +192,6 @@ next:
 	}
 
 	return leaders;
-}
-
-void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t func_start, uint64_t func_end) {
-	SourceLine *sl = nullptr;
-	auto leaders = get_block_leaders(func_start, func_end);
-	uint64_t addr = func_start;
-
-	for (auto leader : leaders) {
-		uint64_t prev_addr;
-
-		do {
-			Dwfl_Line *line;
-			int lnum, cnum;
-
-			line = dwfl_module_getsrc(mod, addr);
-			if (!line)
-				throw std::runtime_error("dwfl_module_getsrc failed");
-			if (!dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL))
-				throw std::runtime_error("dwfl_lineinfo failed");
-
-			bool newLine = sf.lines.count(lnum) == 0;
-			sl = &sf.lines[lnum];
-			if (newLine) {
-				sl->func = &f;
-				sl->definition.line = (unsigned int)lnum;
-				sl->definition.column = (unsigned int)cnum;
-				sl->first_instr = addr;
-			}
-
-			prev_addr = addr;
-			uint32_t mem_word = instr_mem->load_instr(addr);
-			Instruction instr = Instruction(mem_word);
-			if (instr.is_compressed()) {
-				addr += sizeof(uint16_t);
-			} else {
-				addr += sizeof(uint32_t);
-			}
-		} while (leaders.count(addr) == 0 && addr < func_end);
-
-		BasicBlock *bb = f.blocks.add(leader.first, prev_addr);
-		sl->blocks.push_back(bb);
-	}
 }
 
 void Coverage::cover(uint64_t addr) {

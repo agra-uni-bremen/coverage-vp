@@ -52,7 +52,7 @@ public:
 	BasicBlockList blocks;
 
 	uint64_t first_instr;
-	size_t exec_count;
+	size_t exec_count = 0;
 
 	void to_json(nlohmann::json &);
 };
@@ -92,9 +92,8 @@ class Coverage {
 	std::map<std::string, SourceFile> files;
 
 	void init(void);
-	std::string get_loc(Dwfl_Module *, Function::Location &, GElf_Addr);
+	void init_lines(SourceFile&, Function&, uint64_t, uint64_t);
 	std::map<uint64_t, bool> get_block_leaders(uint64_t, uint64_t);
-	void add_lines(SourceFile &, Function &f, uint64_t, uint64_t);
 
 public:
 	Coverage(std::string path, instr_memory_if *_instr_mem);
