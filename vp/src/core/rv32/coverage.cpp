@@ -201,8 +201,8 @@ void Coverage::add_lines(SourceFile &sf, Function &f, uint64_t func_start, uint6
 			}
 		} while (leaders.count(addr) == 0 && addr < func_end);
 
-		std::unique_ptr<BasicBlock> bb = f.blocks.add(leader.first, prev_addr);
-		sl->blocks.push_back(std::move(bb));
+		BasicBlock *bb = f.blocks.add(leader.first, prev_addr);
+		sl->blocks.push_back(bb);
 	}
 }
 

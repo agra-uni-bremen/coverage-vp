@@ -5,15 +5,22 @@
 
 using namespace rv32;
 
-std::unique_ptr<BasicBlock> BasicBlockList::add(uint64_t start, uint64_t end) {
-	return std::make_unique<BasicBlock>(blocks.emplace_back(BasicBlock(start, end)));
+BasicBlockList::~BasicBlockList(void) {
+	for (size_t i = 0; i < blocks.size(); i++)
+		delete blocks[i];
+}
+
+BasicBlock *BasicBlockList::add(uint64_t start, uint64_t end) {
+	BasicBlock *block = new BasicBlock(start, end);
+	blocks.push_back(block);
+	return block;
 }
 
 // TODO: Use binary search
 void BasicBlockList::visit(uint64_t addr) {
-	for (auto &block : blocks) {
-		if (addr >= block.start && addr <= block.end) {
-			block.visited = true;
+	for (auto block : blocks) {
+		if (addr >= block->start && addr <= block->end) {
+			block->visited = true;
 			return;
 		}
 	}
@@ -28,8 +35,8 @@ size_t BasicBlockList::size(void) {
 size_t BasicBlockList::visited(void) {
 	size_t visited = 0;
 
-	for (auto &block : blocks)
-		if (block.visited) visited++;
+	for (auto block : blocks)
+		if (block->visited) visited++;
 
 	return visited;
 }

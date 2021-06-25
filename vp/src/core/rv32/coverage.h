@@ -9,7 +9,6 @@
 #include <memory>
 #include <vector>
 #include <utility>
-#include <memory>
 
 #include <nlohmann/json.hpp>
 #include <elfutils/libdwfl.h>
@@ -29,10 +28,12 @@ public:
 
 class BasicBlockList {
 private:
-	std::vector<BasicBlock> blocks;
+	std::vector<BasicBlock*> blocks;
 
 public:
-	std::unique_ptr<BasicBlock> add(uint64_t start, uint64_t end);
+	~BasicBlockList(void);
+
+	BasicBlock *add(uint64_t start, uint64_t end);
 	void visit(uint64_t addr);
 
 	size_t size(void);
@@ -62,7 +63,7 @@ public:
 	Function::Location definition;
 
 	// References to BasicBlockList elements of func.
-	std::vector<std::unique_ptr<BasicBlock>> blocks;
+	std::vector<BasicBlock*> blocks;
 
 	uint64_t first_instr;
 	size_t exec_count = 0;
@@ -76,8 +77,8 @@ class SourceFile {
 private:
 	std::string name;
 
-	std::map<std::string, Function> funcs;
 	std::map<int, SourceLine> lines;
+	std::map<std::string, Function> funcs;
 
 	void to_json(nlohmann::json &);
 };
