@@ -22,7 +22,7 @@ for line in sys.stdin.readlines():
 
             for line in file["lines"]:
                 jfile["lines"].append({
-                    "branches": [], # TODO
+                    "branches": line["branches"],
                     "count": line["count"],
                     "line_number": line["line_number"],
                     "gcovr/noncode": False,
