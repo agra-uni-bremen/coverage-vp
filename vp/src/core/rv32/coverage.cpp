@@ -152,7 +152,7 @@ std::map<uint64_t, bool> Coverage::get_block_leaders(uint64_t func_start, uint64
 			leaders[prev_addr + instr.B_imm()] = true;
 		} else if (o == Opcode::OP_JAL) {
 			leaders[prev_addr + instr.J_imm()] = true;
-		} else if (o == Opcode::OP_JAL) {
+		} else if (o == Opcode::OP_JALR) {
 			// XXX: not implemented → assuming target is a different function
 		} else {
 			continue;
