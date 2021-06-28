@@ -32,6 +32,7 @@ SymbolicContext::SymbolicContext(void)
 {
 	char *tm;
 
+	this->user_data = nullptr;
 	if ((tm = getenv(TIMEOUT_ENV))) {
 		auto timeout = klee::time::Span(tm);
 		solver.setTimeout(timeout);

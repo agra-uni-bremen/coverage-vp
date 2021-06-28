@@ -51,7 +51,7 @@
 #include "symbolic_explore.h"
 #include "syscall.h"
 #include "platform/common/options.h"
-#include "coverage.h"
+#include "symbolic_context.h"
 
 #include "gdb-mc/gdb_server.h"
 #include "gdb-mc/gdb_runner.h"
@@ -158,8 +158,21 @@ int sc_main(int argc, char **argv) {
 	if (opt.quiet)
 		 sc_core::sc_report_handler::set_verbosity_level(sc_core::SC_NONE);
 
-	Coverage coverage(opt.input_program, instr_mem_if);
-	core.coverage = &coverage;
+	bool newcov;
+	Coverage *coverage;
+	if (symbolic_context.user_data) {
+		coverage = (Coverage *)symbolic_context.user_data;
+		newcov = false;
+	} else {
+		coverage = new Coverage(opt.input_program);
+		newcov = true;
+	}
+	coverage->instr_mem = instr_mem_if;
+	if (newcov) {
+		symbolic_context.user_data = coverage;
+		coverage->init();
+	}
+	core.coverage = coverage;
 
 	sc_core::sc_start();
 	if (!opt.quiet)
@@ -172,10 +185,13 @@ int sc_main(int argc, char **argv) {
 	delete gserver;
 	delete drunner;
 
-	coverage.marshal();
 	return 0;
 }
 
 int main(int argc, char **argv) {
-	return symbolic_explore(argc, argv);
+	int r = symbolic_explore(argc, argv);
+	if (symbolic_context.user_data)
+		((Coverage *)symbolic_context.user_data)->marshal();
+
+	return r;
 }

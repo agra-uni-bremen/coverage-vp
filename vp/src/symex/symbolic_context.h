@@ -18,6 +18,9 @@
 #ifndef RISCV_ISA_SYMBOLIC_CTX_H
 #define RISCV_ISA_SYMBOLIC_CTX_H
 
+#include <stdint.h>
+#include <stdbool.h>
+
 #include <clover/clover.h>
 
 class SymbolicContext {
@@ -25,6 +28,7 @@ public:
 	clover::Solver solver;
 	clover::Trace trace;
 	clover::ExecutionContext ctx;
+	void *user_data;
 
 	SymbolicContext(void);
 };

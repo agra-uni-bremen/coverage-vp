@@ -33,8 +33,7 @@ static const Dwfl_Callbacks offline_callbacks = (Dwfl_Callbacks){
 #define GCC_VERSION "10.3.1 20210424"
 #define FILE_EXT ".gcov.json.gz"
 
-Coverage::Coverage(std::string path, instr_memory_if *_instr_mem)
-  : instr_mem(_instr_mem) {
+Coverage::Coverage(std::string path) {
 	const char *fn = path.c_str();
 
 	if ((fd = open(fn, O_RDONLY)) == -1)
@@ -44,8 +43,6 @@ Coverage::Coverage(std::string path, instr_memory_if *_instr_mem)
 
 	if (!(mod = dwfl_report_offline(dwfl, "main", "main", fd)))
 		throw std::runtime_error("dwfl_report_offline failed");
-
-	init();
 }
 
 Coverage::~Coverage(void) {

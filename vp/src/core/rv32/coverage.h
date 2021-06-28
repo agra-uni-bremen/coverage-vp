@@ -15,6 +15,7 @@
 #include <elfutils/libdwfl.h>
 
 #include "mem_if.h"
+#include "symbolic_context.h"
 
 namespace rv32 {
 
@@ -89,17 +90,19 @@ class Coverage {
 	int fd = -1;
 	Dwfl *dwfl = nullptr;
 	Dwfl_Module *mod = nullptr;
-	instr_memory_if *instr_mem = nullptr;
 
 	std::map<std::string, SourceFile> files;
 
-	void init(void);
 	void init_lines(SourceFile&, Function&, uint64_t, uint64_t);
 	std::map<uint64_t, bool> get_block_leaders(uint64_t, uint64_t);
 
 public:
-	Coverage(std::string path, instr_memory_if *_instr_mem);
+	instr_memory_if *instr_mem = nullptr;
+
+	Coverage(std::string path);
 	~Coverage(void);
+
+	void init(void);
 
 	void cover(uint64_t addr, bool tainted);
 	void marshal(void);
