@@ -581,6 +581,7 @@ void ISS::exec_step() {
 			}
 		} break;
 
+#if 0
 		case Opcode::MUL: {
 			REQUIRE_ISA(M_ISA_EXT);
 
@@ -708,7 +709,6 @@ void ISS::exec_step() {
 			track_and_trace_branch(cond_is_rs2_zero, expr_zero);
 		} break;
 
-#if 0
 		case Opcode::LR_W: {
             REQUIRE_ISA(A_ISA_EXT);
 			uint32_t addr = regs[instr.rs1()];
