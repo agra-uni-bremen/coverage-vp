@@ -68,6 +68,7 @@ public:
 
 	uint64_t first_instr;
 	size_t exec_count = 0;
+	bool tainted = false;
 
 	void to_json(nlohmann::json &);
 };

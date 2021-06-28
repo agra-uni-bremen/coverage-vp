@@ -199,8 +199,6 @@ void Coverage::cover(uint64_t addr, bool tainted) {
 	int lnum, cnum;
 	const char *srcfp, *symbol;
 
-	(void)tainted; // TODO
-
 	line = dwfl_module_getsrc(mod, addr);
 	if (!line)
 		throw std::runtime_error("dwfl_module_getsrc failed");
@@ -223,6 +221,8 @@ void Coverage::cover(uint64_t addr, bool tainted) {
 	SourceLine &sl = f.lines.at(lnum);
 	if (addr == sl.first_instr)
 		sl.exec_count++;
+	if (!sl.tainted)
+		sl.tainted = tainted;
 }
 
 void Coverage::marshal(void) {
