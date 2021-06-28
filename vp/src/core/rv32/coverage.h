@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 #include <map>
 #include <string>
@@ -99,7 +100,7 @@ public:
 	Coverage(std::string path, instr_memory_if *_instr_mem);
 	~Coverage(void);
 
-	void cover(uint64_t addr);
+	void cover(uint64_t addr, bool tainted);
 	void marshal(void);
 };
 

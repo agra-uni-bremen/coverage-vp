@@ -194,10 +194,12 @@ next:
 	return leaders;
 }
 
-void Coverage::cover(uint64_t addr) {
+void Coverage::cover(uint64_t addr, bool tainted) {
 	Dwfl_Line *line;
 	int lnum, cnum;
 	const char *srcfp, *symbol;
+
+	(void)tainted; // TODO
 
 	line = dwfl_module_getsrc(mod, addr);
 	if (!line)

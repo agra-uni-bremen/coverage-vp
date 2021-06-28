@@ -184,9 +184,6 @@ ISS::ISS(SymbolicContext &c, uint32_t hart_id, bool use_E_base_isa)
 void ISS::exec_step() {
 	assert(((pc & ~pc_alignment_mask()) == 0) && "misaligned instruction");
 
-	if (coverage)
-		coverage->cover(pc);
-
 	try {
 		uint32_t mem_word = instr_mem->load_instr(pc);
 		instr = Instruction(mem_word);
@@ -204,6 +201,38 @@ void ISS::exec_step() {
     } else {
 		op = instr.decode_normal(RV32);
 		pc += 4;
+	}
+
+	if (coverage) {
+		std::vector<uint32_t> rops;
+		switch (Opcode::getType(op)) {
+			case Opcode::Type::B:
+			case Opcode::Type::S:
+			case Opcode::Type::R:
+				rops.push_back(instr.rs1());
+				rops.push_back(instr.rs2());
+				break;
+			case Opcode::Type::I:
+				rops.push_back(instr.rs1());
+				break;
+			case Opcode::Type::U:
+			case Opcode::Type::J:
+			case Opcode::Type::UNKNOWN:
+				break; /* no register input operand */
+			case Opcode::Type::R4:
+				throw "Opcode::Type::R4 not supported yet";
+				break;
+		}
+
+		bool tainted = false;
+		for (auto reg : rops) {
+			if (regs[reg]->is_tainted()) {
+				tainted = true;
+				break;
+			}
+		}
+
+		coverage->cover(last_pc, tainted);
 	}
 
 	if (trace) {
