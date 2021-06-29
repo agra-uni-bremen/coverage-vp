@@ -83,7 +83,7 @@ Coverage::init(void) {
 
 		line = dwfl_module_getsrc(mod, addr);
 		if (!line)
-			throw std::runtime_error("dwfl_module_getsrc failed");
+			continue; /* no line number information */
 		if (!(srcfp = dwfl_lineinfo(line, NULL, NULL, NULL, NULL, NULL)))
 			throw std::runtime_error("dwfl_lineinfo failed");
 
@@ -198,7 +198,7 @@ void Coverage::cover(uint64_t addr, bool tainted) {
 
 	line = dwfl_module_getsrc(mod, addr);
 	if (!line)
-		throw std::runtime_error("dwfl_module_getsrc failed");
+		return; /* no line number information */
 	if (!(srcfp = dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL)))
 		throw std::runtime_error("dwfl_lineinfo failed");
 
