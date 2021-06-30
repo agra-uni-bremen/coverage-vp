@@ -28,7 +28,7 @@ void SourceLine::to_json(json &out) {
 	j["line_number"] = definition.line;
 	j["unexecuted_block"] = has_unexecuted_block();
 	j["function_name"] = func->name;
-	j["symex/tainted_instr"] = tainted;
+	j["symex/tainted_instr"] = !tainted_instrs.empty();
 
 	out.push_back(j);
 }

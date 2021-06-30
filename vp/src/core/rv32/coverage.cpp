@@ -218,8 +218,14 @@ void Coverage::cover(uint64_t addr, bool tainted) {
 	SourceLine &sl = f.lines.at(lnum);
 	if (addr == sl.first_instr)
 		sl.exec_count++;
-	if (!sl.tainted)
-		sl.tainted = tainted;
+	
+	if (tainted) {
+		sl.tainted_instrs[addr] = true;
+	} else if (!tainted) {
+		auto elem = sl.tainted_instrs.find(addr);
+		if (elem != sl.tainted_instrs.end())
+			sl.tainted_instrs.erase(elem);
+	}
 }
 
 void Coverage::marshal(void) {

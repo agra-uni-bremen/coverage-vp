@@ -69,7 +69,7 @@ public:
 
 	uint64_t first_instr;
 	size_t exec_count = 0;
-	bool tainted = false;
+	std::map<uint64_t, bool> tainted_instrs;
 
 	void to_json(nlohmann::json &);
 };
