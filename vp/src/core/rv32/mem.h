@@ -196,9 +196,6 @@ struct CombinedMemoryInterface : public sc_core::sc_module,
 		bus_lock->wait_for_access_rights(iss.get_hart_id());
 		// XXX: DMI is currently not supported for symbolic values.
 
-		// Taint value since it is concretized here.
-		addr->taint();
-
 		auto caddr = iss.solver.getValue<uint32_t>(addr->concrete);
 		auto vaddr = v2p(caddr, STORE);
 
@@ -208,9 +205,6 @@ struct CombinedMemoryInterface : public sc_core::sc_module,
 	Concolic symbolic_load_data(Concolic addr, size_t num_bytes) override {
 		bus_lock->wait_for_access_rights(iss.get_hart_id());
 		// XXX: DMI is currently not supported for symbolic values.
-
-		// Taint value since it is concretized here.
-		addr->taint();
 
 		auto caddr = iss.solver.getValue<uint32_t>(addr->concrete);
 		auto vaddr = v2p(caddr, STORE);
