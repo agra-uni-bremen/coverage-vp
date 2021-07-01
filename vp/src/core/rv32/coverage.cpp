@@ -33,6 +33,9 @@ static const Dwfl_Callbacks offline_callbacks = (Dwfl_Callbacks){
 #define GCC_VERSION "10.3.1 20210424"
 #define FILE_EXT ".gcov.json.gz"
 
+#define HAS_PREFIX(STR, PREFIX) \
+	(std::string(PREFIX).find(STR) == 0)
+
 Coverage::Coverage(std::string path) {
 	const char *fn = path.c_str();
 
@@ -230,6 +233,7 @@ void Coverage::cover(uint64_t addr, bool tainted) {
 
 void Coverage::marshal(void) {
 	nlohmann::json j;
+	char *path_filter;
 
 	j["format_version"] = FORMAT_VERSION;
 	j["gcc_version"] = GCC_VERSION;
@@ -237,9 +241,13 @@ void Coverage::marshal(void) {
 	j["files"] = nlohmann::json::array();
 	nlohmann::json &jfiles = j["files"];
 
+	path_filter = getenv("SYMEX_COVERAGE_PATH");
 	for (auto &f : files) {
 		jfiles.clear();
 		auto path = std::filesystem::path(f.first);
+
+		if (path_filter && !HAS_PREFIX(path, path_filter))
+			continue;
 
 		SourceFile &file = f.second;
 		file.to_json(jfiles);
