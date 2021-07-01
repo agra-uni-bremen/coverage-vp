@@ -377,35 +377,35 @@ void ISS::exec_step() {
 
 		case Opcode::SB: {
 			auto addr = regs[RS1]->add(S_IMM);
-			mem->store_byte(addr, regs[RS2]);
 
-			if (regs[RS1]->symbolic.has_value())
-				regs[RD]->taint();
+			if (addr->symbolic.has_value())
+				regs[RS2]->taint();
+			mem->store_byte(addr, regs[RS2]);
 		} break;
 
 		case Opcode::SH: {
 			auto addr = regs[RS1]->add(S_IMM);
 			trap_check_addr_alignment<2, false>(addr);
-			mem->store_half(addr, regs[RS2]);
 
-			if (regs[RS1]->symbolic.has_value())
-				regs[RD]->taint();
+			if (addr->symbolic.has_value())
+				regs[RS2]->taint();
+			mem->store_half(addr, regs[RS2]);
 		} break;
 
 		case Opcode::SW: {
 			auto addr = regs[RS1]->add(S_IMM);
 			trap_check_addr_alignment<4, false>(addr);
-			mem->store_word(addr, regs[RS2]);
 
-			if (regs[RS1]->symbolic.has_value())
-				regs[RD]->taint();
+			if (addr->symbolic.has_value())
+				regs[RS2]->taint();
+			mem->store_word(addr, regs[RS2]);
 		} break;
 
 		case Opcode::LB: {
 			auto addr = regs[RS1]->add(I_IMM);
 			regs.write(RD, mem->load_byte(addr));
 
-			if (regs[RS1]->symbolic.has_value())
+			if (addr->symbolic.has_value())
 				regs[RD]->taint();
 		} break;
 
@@ -414,7 +414,7 @@ void ISS::exec_step() {
 			trap_check_addr_alignment<2, true>(addr);
 			regs.write(RD, mem->load_half(addr));
 
-			if (regs[RS1]->symbolic.has_value())
+			if (addr->symbolic.has_value())
 				regs[RD]->taint();
 		} break;
 
@@ -423,7 +423,7 @@ void ISS::exec_step() {
 			trap_check_addr_alignment<4, true>(addr);
                 	regs.write(RD, mem->load_word(addr));
 
-			if (regs[RS1]->symbolic.has_value())
+			if (addr->symbolic.has_value())
 				regs[RD]->taint();
 		} break;
 
@@ -431,7 +431,7 @@ void ISS::exec_step() {
 			auto addr = regs[RS1]->add(I_IMM);
 			regs.write(RD, mem->load_ubyte(addr));
 
-			if (regs[RS1]->symbolic.has_value())
+			if (addr->symbolic.has_value())
 				regs[RD]->taint();
 		} break;
 
@@ -440,7 +440,7 @@ void ISS::exec_step() {
 			trap_check_addr_alignment<2, true>(addr);
 			regs.write(RD, mem->load_uhalf(addr));
 
-			if (regs[RS1]->symbolic.has_value())
+			if (addr->symbolic.has_value())
 				regs[RD]->taint();
 		} break;
 
