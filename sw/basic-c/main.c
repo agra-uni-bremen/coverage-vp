@@ -9,7 +9,18 @@ int main() {
 
 	make_symbolic(&a, sizeof(a));
 	if (a < sizeof(buf)) {
-		if (buf[a] > 10) {
+		int x;
+
+		x = buf[a];
+		assert(x != 42);
+		x--;
+		if (x > 10) {
+			if (x == 0) {
+				a++;
+			} else if (x == 5) {
+				a = sizeof(buf) - 1;
+			}
+
 			buf[a] = 23;
 			asm("EBREAK");
 		}
