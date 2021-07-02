@@ -245,6 +245,22 @@ int sc_main(int argc, char **argv) {
 		drunner = new DirectCoreRunner(core);
 	}
 
+	bool newcov;
+	Coverage *coverage;
+	if (symbolic_context.user_data) {
+		coverage = (Coverage *)symbolic_context.user_data;
+		newcov = false;
+	} else {
+		coverage = new Coverage(opt.input_program);
+		newcov = true;
+	}
+	coverage->instr_mem = instr_mem_if;
+	if (newcov) {
+		symbolic_context.user_data = coverage;
+		coverage->init();
+	}
+	core.coverage = coverage;
+
 	sc_core::sc_start();
 
 	for (auto mapping : bus.ports)
@@ -257,5 +273,9 @@ int sc_main(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
-	return symbolic_explore(argc, argv);
+	int r = symbolic_explore(argc, argv);
+	if (symbolic_context.user_data)
+		((Coverage *)symbolic_context.user_data)->marshal();
+
+	return r;
 }
