@@ -36,16 +36,21 @@ static const Dwfl_Callbacks offline_callbacks = (Dwfl_Callbacks){
 #define HAS_PREFIX(STR, PREFIX) \
 	(std::string(STR).find(PREFIX) == 0)
 
+static void throw_dwfl_error(std::string prefix) {
+	const char *msg = dwfl_errmsg(dwfl_errno());
+	throw std::runtime_error(prefix + ": " + std::string(msg));
+}
+
 Coverage::Coverage(std::string path) {
 	const char *fn = path.c_str();
 
 	if ((fd = open(fn, O_RDONLY)) == -1)
 		throw std::system_error(errno, std::generic_category());
 	if (!(dwfl = dwfl_begin(&offline_callbacks)))
-		throw std::runtime_error("dwfl_begin failed");
+		throw_dwfl_error("dwfl_begin failed");
 
 	if (!(mod = dwfl_report_offline(dwfl, "main", "main", fd)))
-		throw std::runtime_error("dwfl_report_offline failed");
+		throw_dwfl_error("dwfl_report_offline failed");
 }
 
 Coverage::~Coverage(void) {
@@ -70,7 +75,7 @@ Coverage::init(void) {
 	int n;
 
 	if ((n = dwfl_module_getsymtab(mod)) == -1)
-		throw std::runtime_error("dwfl_module_getsymtab failed");
+		throw_dwfl_error("dwfl_module_getsymtab failed");
 
 	for (int i = 0; i < n; i++) {
 		GElf_Sym sym;
@@ -88,7 +93,7 @@ Coverage::init(void) {
 		if (!line)
 			continue; /* no line number information */
 		if (!(srcfp = dwfl_lineinfo(line, NULL, NULL, NULL, NULL, NULL)))
-			throw std::runtime_error("dwfl_lineinfo failed");
+			throw_dwfl_error("dwfl_lineinfo failed");
 
 		std::string fp = std::string(srcfp);
 		bool newfile = files.count(fp) == 0;
@@ -117,9 +122,9 @@ void Coverage::init_lines(SourceFile &sf, Function &f, uint64_t func_start, uint
 
 			line = dwfl_module_getsrc(mod, addr);
 			if (!line)
-				throw std::runtime_error("dwfl_module_getsrc failed");
+				throw_dwfl_error("dwfl_module_getsrc failed for " + std::to_string(addr));
 			if (!dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL))
-				throw std::runtime_error("dwfl_lineinfo failed");
+				throw_dwfl_error("dwfl_lineinfo failed");
 
 			bool newLine = sf.lines.count(lnum) == 0;
 			sl = &sf.lines[lnum];
@@ -203,7 +208,7 @@ void Coverage::cover(uint64_t addr, bool tainted) {
 	if (!line)
 		return; /* no line number information */
 	if (!(srcfp = dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL)))
-		throw std::runtime_error("dwfl_lineinfo failed");
+		throw_dwfl_error("dwfl_lineinfo failed");
 
 	std::string name = std::string(srcfp);
 	if (files.count(name) == 0)
@@ -211,7 +216,7 @@ void Coverage::cover(uint64_t addr, bool tainted) {
 	SourceFile &f = files.at(name);
 
 	if (!(symbol = dwfl_module_addrname(mod, addr)))
-		throw std::runtime_error("dwfl_module_addrname failed");
+		throw_dwfl_error("dwfl_module_addrname failed");
 
 	Function &func = f.funcs.at(symbol);
 	if (addr == func.first_instr)
