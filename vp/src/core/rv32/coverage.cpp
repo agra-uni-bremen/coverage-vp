@@ -34,7 +34,7 @@ static const Dwfl_Callbacks offline_callbacks = (Dwfl_Callbacks){
 #define FILE_EXT ".gcov.json.gz"
 
 #define HAS_PREFIX(STR, PREFIX) \
-	(std::string(PREFIX).find(STR) == 0)
+	(std::string(STR).find(PREFIX) == 0)
 
 Coverage::Coverage(std::string path) {
 	const char *fn = path.c_str();
