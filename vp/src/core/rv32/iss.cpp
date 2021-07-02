@@ -516,7 +516,7 @@ void ISS::exec_step() {
 		} break;
 
 		case Opcode::ECALL: {
-			if (sys) {
+			if (sys && solver.getValue<uint32_t>(regs[RegFile::a7]->concrete) != 0) {
 				sys->execute_syscall(this);
 			} else {
 				switch (prv) {
