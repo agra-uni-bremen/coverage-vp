@@ -36,9 +36,19 @@ static const Dwfl_Callbacks offline_callbacks = (Dwfl_Callbacks){
 #define HAS_PREFIX(STR, PREFIX) \
 	(std::string(STR).find(PREFIX) == 0)
 
+class DwarfException : public std::exception {
+public:
+	std::string msg;
+
+	DwarfException(std::string _msg) : msg(_msg) {}
+	const char *what(void) const throw() {
+		return msg.c_str();
+	}
+};
+
 static void throw_dwfl_error(std::string prefix) {
 	const char *msg = dwfl_errmsg(dwfl_errno());
-	throw std::runtime_error(prefix + ": " + std::string(msg));
+	throw DwarfException(prefix + ": " + std::string(msg));
 }
 
 Coverage::Coverage(std::string path) {
