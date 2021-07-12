@@ -132,7 +132,7 @@ void Coverage::init_lines(SourceFile &sf, Function &f, uint64_t func_start, uint
 
 			line = dwfl_module_getsrc(mod, addr);
 			if (!line)
-				throw_dwfl_error("dwfl_module_getsrc failed for " + std::to_string(addr));
+				continue;
 			if (!dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL))
 				throw_dwfl_error("dwfl_lineinfo failed");
 
