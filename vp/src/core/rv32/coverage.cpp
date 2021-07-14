@@ -188,9 +188,13 @@ std::map<uint64_t, bool> Coverage::get_block_leaders(uint64_t func_start, uint64
 		// TODO: decode_and_expand_compressed for compressed
 		int32_t o = instr.opcode();
 		if (o == Opcode::OP_BEQ) {
-			leaders[addr + instr.B_imm()] = true;
+			uint64_t dest = addr + instr.B_imm();
+			if (dest >= func_start && dest < func_end)
+				leaders[dest] = true;
 		} else if (o == Opcode::OP_JAL) {
-			leaders[addr + instr.J_imm()] = true;
+			uint64_t dest = addr + instr.J_imm();
+			if (dest >= func_start && dest < func_end)
+				leaders[dest] = true;
 		} else if (o == Opcode::OP_JALR) {
 			// XXX: not implemented → assuming target is a different function
 		} else {
