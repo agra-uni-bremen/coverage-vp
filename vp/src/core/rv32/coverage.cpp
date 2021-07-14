@@ -125,6 +125,7 @@ void Coverage::init_lines(SourceFile &sf, Function &f, uint64_t func_start, uint
 
 	for (auto leader : leaders) {
 		uint64_t prev_addr;
+		const char *srcfp;
 
 		do {
 			Dwfl_Line *line;
@@ -135,8 +136,11 @@ void Coverage::init_lines(SourceFile &sf, Function &f, uint64_t func_start, uint
 			line = dwfl_module_getsrc(mod, addr);
 			if (!line)
 				continue;
-			if (!dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL))
+			if (!(srcfp = dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL)))
 				throw_dwfl_error("dwfl_lineinfo failed");
+
+			// TODO: This assert fails in case of inlining
+			assert(std::string(srcfp) == sf.name);
 
 			bool newLine = sf.lines.count(lnum) == 0;
 			sl = &sf.lines[lnum];
