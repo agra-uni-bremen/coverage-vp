@@ -130,6 +130,8 @@ void Coverage::init_lines(SourceFile &sf, Function &f, uint64_t func_start, uint
 			Dwfl_Line *line;
 			int lnum, cnum;
 
+			assert(addr < func_end);
+
 			line = dwfl_module_getsrc(mod, addr);
 			if (!line)
 				continue;
