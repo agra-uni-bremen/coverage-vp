@@ -54,6 +54,7 @@ public:
 	BasicBlockList blocks;
 
 	uint64_t first_instr;
+	uint64_t last_instr;
 	size_t exec_count = 0;
 
 	void to_json(nlohmann::json &);
@@ -61,7 +62,7 @@ public:
 
 class SourceLine {
 public:
-	Function* func;
+	std::string func_name;
 	Function::Location definition;
 
 	// References to BasicBlockList elements of func.
@@ -93,7 +94,8 @@ class Coverage {
 
 	std::map<std::string, SourceFile> files;
 
-	void init_lines(SourceFile&, Function&, uint64_t, uint64_t);
+	std::string get_loc(Dwfl_Module *, Function::Location &, GElf_Addr);
+	void add_func(Function*, uint64_t, uint64_t);
 	std::map<uint64_t, bool> get_block_leaders(uint64_t, uint64_t);
 
 public:

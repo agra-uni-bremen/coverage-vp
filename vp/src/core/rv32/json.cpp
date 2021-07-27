@@ -27,7 +27,7 @@ void SourceLine::to_json(json &out) {
 	j["count"] = exec_count;
 	j["line_number"] = definition.line;
 	j["unexecuted_block"] = has_unexecuted_block();
-	j["function_name"] = func->name;
+	j["function_name"] = func_name;
 	j["symex/tainted_instr"] = !tainted_instrs.empty();
 
 	out.push_back(j);

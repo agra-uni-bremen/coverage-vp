@@ -83,6 +83,7 @@ Coverage::~Coverage(void) {
 void
 Coverage::init(void) {
 	int n;
+	std::vector<Function*> funcs;
 
 	if ((n = dwfl_module_getsymtab(mod)) == -1)
 		throw_dwfl_error("dwfl_module_getsymtab failed");
@@ -90,8 +91,7 @@ Coverage::init(void) {
 	for (int i = 0; i < n; i++) {
 		GElf_Sym sym;
 		GElf_Addr addr;
-		const char *name, *srcfp;
-		Dwfl_Line *line;
+		const char *name;
 		uint64_t end;
 
 		name = dwfl_module_getsym_info(mod, i, &sym, &addr, NULL, NULL, NULL);
@@ -99,33 +99,62 @@ Coverage::init(void) {
 			continue; /* not a function symbol */
 		end = (uint64_t)(addr + sym.st_size);
 
-		line = dwfl_module_getsrc(mod, addr);
-		if (!line)
-			continue; /* no line number information */
-		if (!(srcfp = dwfl_lineinfo(line, NULL, NULL, NULL, NULL, NULL)))
-			throw_dwfl_error("dwfl_lineinfo failed");
+		std::pair<Function::Location, Function::Location> def;
+		std::string fp;
+		try {
+			fp = get_loc(mod, def.first, addr);
+		} catch (const DwarfException&) {
+			continue; // no line number information
+		}
+		get_loc(mod, def.second, end - sizeof(uint32_t)); // XXX
 
-		std::string fp = std::string(srcfp);
 		bool newfile = files.count(fp) == 0;
 		SourceFile &sf = files[fp];
 		if (newfile)
 			sf.name = std::move(fp);
 
-		Function &f = sf.funcs[name];
-		f.name = std::string(name);
-		f.first_instr = addr;
-		init_lines(sf, f, addr, end);
+		Function *f = &sf.funcs[name];
+		f->name = std::string(name);
+		f->first_instr = addr;
+		f->last_instr = end - 4; // XXX
+		funcs.push_back(f);
 	}
+
+	for (auto f : funcs)
+		add_func(f, f->first_instr, f->last_instr);
 }
 
-void Coverage::init_lines(SourceFile &sf, Function &f, uint64_t func_start, uint64_t func_end) {
-	SourceLine *sl = nullptr, *first_sl = nullptr;
+std::string Coverage::get_loc(Dwfl_Module *mod, Function::Location &loc, GElf_Addr addr) {
+	Dwfl_Line *line;
+	const char *srcfp;
+	int lnum, cnum;
+
+	line = dwfl_module_getsrc(mod, addr);
+	if (!line)
+		throw_dwfl_error("dwfl_module_getsrc failed");
+	if (!(srcfp = dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL)))
+		throw_dwfl_error("dwfl_lineinfo failed");
+
+	assert(lnum > 0 && cnum >= 0);
+
+	loc.line = (unsigned int)lnum;
+	loc.column = (unsigned int)cnum;
+
+	return std::string(srcfp);
+}
+
+void Coverage::add_func(Function *f, uint64_t func_start, uint64_t func_end) {
+	SourceLine *sl = nullptr;
 	auto leaders = get_block_leaders(func_start, func_end);
 	uint64_t addr = func_start;
 
 	for (auto leader : leaders) {
 		uint64_t prev_addr;
 		const char *srcfp;
+
+		// If the last instruction of the function is a leader.
+		if (addr == func_end)
+			break;
 
 		do {
 			Dwfl_Line *line;
@@ -139,20 +168,24 @@ void Coverage::init_lines(SourceFile &sf, Function &f, uint64_t func_start, uint
 			if (!(srcfp = dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL)))
 				throw_dwfl_error("dwfl_lineinfo failed");
 
-			// TODO: This assert fails in case of inlining
-			assert(std::string(srcfp) == sf.name);
+			auto name = std::string(srcfp);
+			bool newfile = files.count(name) == 0;
+			SourceFile &sf = files[name];
+			if (newfile) // inlined code that we haven't seen before
+				sf.name = std::move(name);
 
 			bool newLine = sf.lines.count(lnum) == 0;
 			sl = &sf.lines[lnum];
 			if (newLine) {
-				sl->func = &f;
+				const char *fname = dwfl_module_addrname(mod, addr);
+				if (!fname)
+					throw_dwfl_error("dwfl_module_addrname failed");
+
+				sl->func_name = std::string(fname);
 				sl->definition.line = (unsigned int)lnum;
 				sl->definition.column = (unsigned int)cnum;
 				sl->first_instr = addr;
 			}
-
-			if (!first_sl)
-				first_sl = sl;
 
 			prev_addr = addr;
 			uint32_t mem_word = instr_mem->load_instr(addr);
@@ -164,12 +197,10 @@ void Coverage::init_lines(SourceFile &sf, Function &f, uint64_t func_start, uint
 			}
 		} while (leaders.count(addr) == 0 && addr < func_end);
 
-		BasicBlock *bb = f.blocks.add(leader.first, prev_addr);
+		BasicBlock *bb = f->blocks.add(leader.first, prev_addr);
+		assert(sl);
 		sl->blocks.push_back(bb);
 	}
-
-	/* Set function location based on gathered line information */
-	f.definition = std::make_pair(first_sl->definition, sl->definition);
 }
 
 /* https://en.wikipedia.org/wiki/Basic_block#Creation_algorithm */
