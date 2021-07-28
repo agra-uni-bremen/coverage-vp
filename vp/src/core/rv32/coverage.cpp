@@ -152,15 +152,11 @@ void Coverage::add_func(Function *f, uint64_t func_start, uint64_t func_end) {
 		uint64_t prev_addr;
 		const char *srcfp;
 
-		// If the last instruction of the function is a leader.
-		if (addr == func_end)
-			break;
-
 		do {
 			Dwfl_Line *line;
 			int lnum, cnum;
 
-			assert(addr < func_end);
+			assert(addr <= func_end);
 
 			line = dwfl_module_getsrc(mod, addr);
 			if (!line)
@@ -195,7 +191,7 @@ void Coverage::add_func(Function *f, uint64_t func_start, uint64_t func_end) {
 			} else {
 				addr += sizeof(uint32_t);
 			}
-		} while (leaders.count(addr) == 0 && addr < func_end);
+		} while (leaders.count(addr) == 0 && addr <= func_end);
 
 		BasicBlock *bb = f->blocks.add(leader.first, prev_addr);
 		assert(sl);
