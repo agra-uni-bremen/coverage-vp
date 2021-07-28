@@ -269,6 +269,13 @@ void Coverage::cover(uint64_t addr, bool tainted) {
 	if (!(symbol = dwfl_module_addrname(mod, addr)))
 		throw_dwfl_error("dwfl_module_addrname failed");
 
+	// This is a workaround for bug in elfutils. Due to this bug
+	// inlined code is currently not handeled correctly.
+	//
+	// https://sourceware.org/bugzilla/show_bug.cgi?id=28148
+	if (f.funcs.count(symbol) == 0)
+		return;
+
 	Function &func = f.funcs.at(symbol);
 	if (addr == func.first_instr)
 		func.exec_count++;
