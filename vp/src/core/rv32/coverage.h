@@ -82,15 +82,6 @@ private:
 	std::string name;
 
 	std::map<int, SourceLine> lines;
-	// The assumption here is that functions/symbol names are unique
-	// on a per source file basis. However, this assumption may not
-	// neccesairly hold. For example, RIOT uses static inline
-	// function defined in header files. As such, multiple symbols
-	// will appear at different addresses which are all defined with
-	// the same name in the same source file (the corresponding
-	// header file).
-	//
-	// This causes issues and should somehow be addressed.
 	std::map<std::string, Function> funcs;
 
 	void to_json(nlohmann::json &);

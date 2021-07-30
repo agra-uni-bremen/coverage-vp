@@ -113,6 +113,13 @@ Coverage::init(void) {
 		if (newfile)
 			sf.name = std::move(fp);
 
+		// XXX: The assumption here is that functions/symbol names are
+		// unique on a per source file basis. However, this assumption
+		// may not neccesairly hold. For example, RIOT uses static
+		// inline function defined in header files. As such, multiple
+		// symbols will appear at different addresses which are all
+		// defined with the same name in the same source file (the
+		// corresponding header file).
 		if (sf.funcs.count(name) != 0)
 			throw std::runtime_error(std::string("duplicated symbol ") + name);
 
