@@ -261,6 +261,10 @@ void Coverage::cover(uint64_t addr, bool tainted) {
 	int lnum, cnum;
 	const char *srcfp, *symbol;
 
+	// TODO: Check if the code at addr is inlined. If it is, mark
+	// the code in the caller *and* the definition of the inlined
+	// callee (i.e. the inlined source code) as executed.
+
 	line = dwfl_module_getsrc(mod, addr);
 	if (!line)
 		return; /* no line number information */
