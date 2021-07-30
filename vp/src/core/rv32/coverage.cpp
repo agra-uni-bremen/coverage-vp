@@ -113,6 +113,9 @@ Coverage::init(void) {
 		if (newfile)
 			sf.name = std::move(fp);
 
+		if (sf.funcs.count(name) != 0)
+			throw std::runtime_error(std::string("duplicated symbol ") + name);
+
 		Function *f = &sf.funcs[name];
 		f->name = std::string(name);
 		f->first_instr = addr;
