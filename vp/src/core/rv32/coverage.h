@@ -45,8 +45,8 @@ public:
 struct Function {
 public:
 	struct Location {
-		unsigned int line;
-		unsigned int column;
+		int line;
+		int column;
 	};
 
 	std::string name;
@@ -54,7 +54,6 @@ public:
 	BasicBlockList blocks;
 
 	uint64_t first_instr;
-	uint64_t last_instr;
 	size_t exec_count = 0;
 
 	void to_json(nlohmann::json &);
@@ -93,10 +92,6 @@ class Coverage {
 	Dwfl_Module *mod = nullptr;
 
 	std::map<std::string, SourceFile> files;
-
-	std::string get_loc(Dwfl_Module *, Function::Location &, GElf_Addr);
-	void add_func(Function*, uint64_t, uint64_t);
-	std::map<uint64_t, bool> get_block_leaders(uint64_t, uint64_t);
 
 public:
 	instr_memory_if *instr_mem = nullptr;
