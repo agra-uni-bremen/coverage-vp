@@ -102,7 +102,9 @@ Coverage::init(void) {
 
 		for (size_t i = 0; i < lines; i++) {
 			Dwarf_Addr addr;
+			Dwarf_Line *l;
 			Dwfl_Line *line;
+			bool block_start;
 
 			line = dwfl_onesrcline (cu, i);
 			if (!dwfl_lineinfo(line, &addr, NULL, NULL, NULL, NULL))
@@ -115,8 +117,10 @@ Coverage::init(void) {
 
 			if (block_prev == 0)
 				block_prev = addr;
-			bool block_start;
-			dwarf_lineblock(dwarf_getsrc_die(cu, addr), &block_start);
+			if (!(l = dwfl_dwarf_line(line, &bias)))
+				throw_dwfl_error("dwfl_dwarf_line failed");
+			if (dwarf_lineblock(l, &block_start) != 0)
+				block_start = false;
 
 			auto sources = get_sources(mod, addr);
 			for (auto s : sources) {
