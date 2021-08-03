@@ -57,7 +57,7 @@ Coverage::Coverage(std::string path) {
 	if (!(dwfl = dwfl_begin(&offline_callbacks)))
 		throw_dwfl_error("dwfl_begin failed");
 
-	if (!(mod = dwfl_report_offline(dwfl, "main", "main", fd)))
+	if (!(mod = dwfl_report_offline(dwfl, "", fn, fd)))
 		throw_dwfl_error("dwfl_report_offline failed");
 }
 
