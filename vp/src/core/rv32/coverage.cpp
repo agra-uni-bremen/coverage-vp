@@ -17,6 +17,8 @@
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
+#include "dwarf_exception.h"
+
 using namespace rv32;
 
 /* Taken from elfutils example code. */
@@ -29,6 +31,16 @@ static const Dwfl_Callbacks offline_callbacks = (Dwfl_Callbacks){
 	.debuginfo_path = &debuginfo_path,
 };
 
+typedef enum {
+	INIT_BASIC_BLOCKS,
+	INIT_FUNCTIONS,
+} handler_type;
+
+struct Context {
+	Coverage *cov;
+	handler_type handler;
+};
+
 #define ARCH RV32
 #define FORMAT_VERSION "1"
 #define GCC_VERSION "10.3.1 20210424"
@@ -36,25 +48,6 @@ static const Dwfl_Callbacks offline_callbacks = (Dwfl_Callbacks){
 
 #define HAS_PREFIX(STR, PREFIX) \
 	(std::string(STR).find(PREFIX) == 0)
-
-class DwarfException : public std::exception {
-public:
-	std::string msg;
-
-	DwarfException(std::string _msg) : msg(_msg) {}
-	const char *what(void) const throw() {
-		return msg.c_str();
-	}
-};
-
-static void throw_dwfl_error(std::string prefix) {
-	const char *msg = dwfl_errmsg(dwfl_errno());
-	if (msg) {
-		throw DwarfException(prefix + ": " + std::string(msg));
-	} else {
-		throw DwarfException(prefix);
-	}
-}
 
 Coverage::Coverage(std::string path) {
 	const char *fn = path.c_str();
@@ -85,100 +78,184 @@ Coverage::~Coverage(void) {
 	}
 }
 
+/* https://en.wikipedia.org/wiki/Basic_block#Creation_algorithm */
+void
+Coverage::init_basic_blocks(uint64_t func_start, uint64_t func_end) {
+	uint64_t addr;
+	bool prev_wasjump = false;
+
+	/* The first instruction is always a leader */
+	block_leaders[func_start] = true;
+
+	addr = func_start;
+	while (addr < func_end) {
+		// Instruction that immediately follows a (un)conditional jump/branch is a leader
+		if (prev_wasjump)
+			block_leaders[addr] = true;
+		prev_wasjump = false;
+
+		uint32_t mem_word = instr_mem->load_instr(addr);
+		Instruction instr = Instruction(mem_word);
+
+		// TODO: decode_and_expand_compressed for compressed
+		int32_t o = instr.opcode();
+		if (o == Opcode::OP_BEQ) {
+			uint64_t dest = addr + instr.B_imm();
+			if (dest >= func_start && dest < func_end)
+				block_leaders[dest] = true;
+		} else if (o == Opcode::OP_JAL) {
+			uint64_t dest = addr + instr.J_imm();
+			if (dest >= func_start && dest < func_end)
+				block_leaders[dest] = true;
+		} else if (o == Opcode::OP_JALR) {
+			// XXX: not implemented → assuming target is a different function
+		} else {
+			goto next;
+		}
+		prev_wasjump = true;
+
+next:
+		if (instr.is_compressed()) {
+			addr += sizeof(uint16_t);
+		} else {
+			addr += sizeof(uint32_t);
+		}
+	}
+}
+
+void
+Coverage::add_func(uint64_t func_start, uint64_t func_end) {
+	std::vector<std::pair<Function*, SourceLine*>> prev;
+	uint64_t addr = func_start;
+	uint64_t block_prev = addr;
+
+	while (addr < func_end) {
+		if (!dwfl_module_addrname(mod, addr)) {
+			std::cerr << "Warning: Could not determine name for 0x" << std::hex << addr << std::endl;
+			continue;
+		}
+
+		auto sources = get_sources(mod, addr);
+		for (auto s : sources) {
+			if (s.symbol_name.empty() || s.source_path.empty())
+				continue; // FIXME: Bug in get_sources
+
+			bool newFile = files.count(s.source_path) == 0;
+			SourceFile &sf = files[s.source_path];
+			if (newFile)
+				sf.name = std::move(s.source_path);
+
+			bool newFunc = sf.funcs.count(s.symbol_name) == 0;
+			Function &f = sf.funcs[s.symbol_name];
+			if (newFunc) {
+				f.name = std::move(s.symbol_name);
+				f.definition.first.line = s.line;
+				f.definition.first.column = s.column;
+				f.first_instr = addr;
+			}
+
+			bool newLine = sf.lines.count(s.line) == 0;
+			SourceLine &sl = sf.lines[s.line];
+			if (newLine) {
+				sl.func_name = f.name;
+				sl.definition.line = s.line;
+				sl.definition.column = s.column;
+				sl.first_instr = addr;
+
+				if (sl.definition.line > f.definition.second.line)
+					f.definition.second = sl.definition;
+			}
+		}
+
+		uint32_t mem_word = instr_mem->load_instr(addr);
+		Instruction instr = Instruction(mem_word);
+		if (instr.is_compressed()) {
+			addr += sizeof(uint16_t);
+		} else {
+			addr += sizeof(uint32_t);
+		}
+
+		bool block_start = block_leaders.count(addr) != 0;
+		if (block_start || addr == func_end) {
+			assert(block_prev < addr);
+			for (auto s : sources) {
+				SourceFile &sf = files.at(s.source_path);
+				Function &f = sf.funcs.at(s.symbol_name);
+				SourceLine sl = sf.lines.at(s.line);
+
+				BasicBlock *bb = f.blocks.add(block_prev, addr);
+				sl.blocks.push_back(bb);
+			}
+			
+			block_prev = addr;
+		}
+	}
+}
+
+static int
+handle_func(Dwarf_Die *die, void *arg)
+{
+	Context *ctx = (Context *)arg;
+	Dwarf_Addr lopc, hipc;
+
+	if (dwarf_func_inline(die))
+		return DWARF_CB_OK;
+
+	if (dwarf_lowpc(die, &lopc) == 0 && dwarf_highpc(die, &hipc) == 0) {
+		lopc += ctx->cov->bias;
+		hipc += ctx->cov->bias;
+
+		switch (ctx->handler) {
+		case INIT_BASIC_BLOCKS:
+			ctx->cov->init_basic_blocks(lopc, hipc);
+			break;
+		case INIT_FUNCTIONS:
+			ctx->cov->add_func(lopc, hipc);
+			break;
+		}
+	}
+
+	return DWARF_CB_OK;
+}
+
 void
 Coverage::init(void) {
-	Dwarf_Addr bias;
 	Dwarf_Die *cu;
+	Context ctx;
+	ctx.cov = this;
 
 	bias = 0;
 	cu = nullptr;
 
-	while ((cu = dwfl_module_nextcu(mod, cu, &bias))) {
-		size_t lines;
-		Dwarf_Addr block_prev = 0; /* Previous basic block start address */
+	ctx.handler = INIT_BASIC_BLOCKS;
+	while ((cu = dwfl_module_nextcu(mod, cu, &bias)))
+		dwarf_getfuncs(cu, handle_func, (void *)&ctx, 0);
 
-		if (dwfl_getsrclines (cu, &lines) != 0)
-			continue; // No line information
+	bias = 0;
+	cu = nullptr;
 
-		for (size_t i = 0; i < lines; i++) {
-			Dwarf_Addr addr;
-			Dwarf_Line *l;
-			Dwfl_Line *line;
-			bool block_start;
-
-			line = dwfl_onesrcline (cu, i);
-			if (!dwfl_lineinfo(line, &addr, NULL, NULL, NULL, NULL))
-				throw_dwfl_error("dwfl_lineinfo failed");
-
-			if (!dwfl_module_addrname(mod, addr)) {
-				std::cerr << "Warning: Could not determine name for 0x" << std::hex << addr << std::endl;
-				continue;
-			}
-
-			if (block_prev == 0)
-				block_prev = addr;
-			if (!(l = dwfl_dwarf_line(line, &bias)))
-				throw_dwfl_error("dwfl_dwarf_line failed");
-			if (dwarf_lineblock(l, &block_start) != 0)
-				block_start = false;
-
-			auto sources = get_sources(mod, addr);
-			for (auto s : sources) {
-				if (s.symbol_name.empty() || s.source_path.empty())
-					continue; // FIXME: Bug in get_sources
-
-				bool newFile = files.count(s.source_path) == 0;
-				SourceFile &sf = files[s.source_path];
-				if (newFile)
-					sf.name = std::move(s.source_path);
-
-				bool newFunc = sf.funcs.count(s.symbol_name) == 0;
-				Function &f = sf.funcs[s.symbol_name];
-				if (newFunc) {
-					f.name = std::move(s.symbol_name);
-					f.definition.first.line = s.line;
-					f.definition.first.column = s.column;
-					f.first_instr = addr;
-				}
-
-				bool newLine = sf.lines.count(s.line) == 0;
-				SourceLine &sl = sf.lines[s.line];
-				if (newLine) {
-					sl.func_name = f.name;
-					sl.definition.line = s.line;
-					sl.definition.column = s.column;
-					sl.first_instr = addr;
-
-					if (sl.definition.line > f.definition.second.line)
-						f.definition.second = sl.definition;
-				}
-
-				if (block_start && block_prev != 0) {
-					BasicBlock *bb = f.blocks.add(block_prev, block_start);
-					std::cout << "Block between 0x" << std::hex << block_prev << " 0x" << std::hex << block_start << std::endl;
-					sl.blocks.push_back(bb);
-					block_prev = 0;
-				}
-			}
-		}
-	}
+	ctx.handler = INIT_FUNCTIONS;
+	while ((cu = dwfl_module_nextcu(mod, cu, &bias)))
+		dwarf_getfuncs(cu, handle_func, (void *)&ctx, 0);
 }
 
 void Coverage::cover(uint64_t addr, bool tainted) {
 	auto sources = get_sources(mod, addr);
 	for (auto source : sources) {
+		if (files.count(source.source_path) == 0)
+			continue; /* assembler file */
+
 		SourceFile &f = files.at(source.source_path);
 
 		Function &func = f.funcs.at(source.symbol_name);
 		if (addr == func.first_instr)
 			func.exec_count++;
-		func.blocks.visit(addr); // XXX
+		func.blocks.visit(addr);
 
 		SourceLine &sl = f.lines.at((unsigned int)source.line);
 		if (addr == sl.first_instr)
 			sl.exec_count++;
 		
-		// XXX: Addr handling for inlined stuff?
 		if (tainted) {
 			sl.tainted_instrs[addr] = true;
 		} else if (!tainted) {

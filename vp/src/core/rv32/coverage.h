@@ -91,15 +91,19 @@ class Coverage {
 	Dwfl *dwfl = nullptr;
 	Dwfl_Module *mod = nullptr;
 
+	std::map<uint64_t, bool> block_leaders;
 	std::map<std::string, SourceFile> files;
 
 public:
+	Dwarf_Addr bias = 0;
 	instr_memory_if *instr_mem = nullptr;
 
 	Coverage(std::string path);
 	~Coverage(void);
 
 	void init(void);
+	void init_basic_blocks(uint64_t, uint64_t);
+	void add_func(uint64_t, uint64_t);
 
 	void cover(uint64_t addr, bool tainted);
 	void marshal(void);
