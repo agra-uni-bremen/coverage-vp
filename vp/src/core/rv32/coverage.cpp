@@ -130,11 +130,6 @@ Coverage::add_func(uint64_t func_start, uint64_t func_end) {
 	uint64_t block_prev = addr;
 
 	while (addr < func_end) {
-		if (!dwfl_module_addrname(mod, addr)) {
-			std::cerr << "Warning: Could not determine name for 0x" << std::hex << addr << std::endl;
-			continue;
-		}
-
 		auto sources = get_sources(mod, addr);
 		for (auto s : sources) {
 			if (s.symbol_name.empty() || s.source_path.empty())

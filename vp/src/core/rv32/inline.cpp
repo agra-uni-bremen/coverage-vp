@@ -21,6 +21,7 @@
 #include <stdexcept>
 #include <dwarf.h>
 
+#include "dwarf_exception.h"
 #include "inline.h"
 
 static const char *
@@ -33,7 +34,7 @@ get_diename (Dwarf_Die *die)
 	if (name == NULL)
 		name = dwarf_diename (die);
 	if (name == NULL)
-		throw std::runtime_error("get_diename failed");
+		throw_dwfl_error("get_diename failed");
 
 	return name;
 }
@@ -132,11 +133,11 @@ get_sources(Dwfl_Module *mod, Dwarf_Addr addr)
 		int lnum, cnum;
 		const char *srcfp;
 		if (!(srcfp = dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL)))
-			throw std::runtime_error("dwfl_lineinfo failed");
+			throw_dwfl_error("dwfl_lineinfo failed");
 
 		const char *name;
 		if (!(name = dwfl_module_addrname(mod, addr)))
-			throw std::runtime_error("dwfl_module_addrname failed");
+			throw_dwfl_error("dwfl_module_addrname failed");
 
 		funcs.push_back(SourceInfo(
 			std::string(name),
