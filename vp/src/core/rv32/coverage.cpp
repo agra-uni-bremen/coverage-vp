@@ -218,6 +218,15 @@ handle_func(Dwarf_Die *die, void *arg)
 	return DWARF_CB_OK;
 }
 
+// We need to iterate over every insturction since we need to
+// map addresses to source lines in Coverage:cover. Iterating
+// over each line (e.g. with dwfl_getsrclines) does not work.
+//
+// In order to iterate over all instructions, we iterate over
+// all DWARF Compilation Units (CUs) and extract all functions
+// defined in these CUs (using dwarf_getfuncs). Afterwards, we
+// iterate over all instructions in these functions. To
+// iteratively fill our internal datastructures.
 void
 Coverage::init(void) {
 	Dwarf_Die *cu;
@@ -226,6 +235,14 @@ Coverage::init(void) {
 
 	bias = 0;
 	cu = nullptr;
+
+	// The GCOV JSON data structure includes information about basic
+	// blocks. Theoratically it is possible to encode information
+	// about basic block leaders in the DWARF Line Table. However,
+	// either GCC does not support this or I was unable to configure
+	// it accordingly. For this reason, we extract basic block
+	// leaders manually (through init_basic_blocks) first and then
+	// iterate over all instructoins (through add_func).
 
 	ctx.handler = INIT_BASIC_BLOCKS;
 	while ((cu = dwfl_module_nextcu(mod, cu, &bias)))
