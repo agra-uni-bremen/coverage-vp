@@ -18,6 +18,10 @@ public:
 		: symbol_name(_symbol_name), source_path(_source_path), line(_line), column(_column) {}
 };
 
+// For a given instruction address this function returns a SourceInfo
+// for all effected source code lines. For example, when a function is
+// inlined both the inlined code and the invocation of the inlined code
+// in the caller need to be marked as executed.
 std::vector<SourceInfo> get_sources(Dwfl_Module *mod, Dwarf_Addr addr);
 
 #endif
