@@ -119,6 +119,35 @@ get_inlines(std::vector<SourceInfo> &funcs, Dwfl_Module *mod, Dwarf_Addr addr)
 	free(scopes);
 }
 
+std::string
+get_dwarf_function (Dwfl_Module *mod, Dwarf_Addr addr)
+{
+	const char *name = NULL;
+	Dwarf_Addr bias = 0;
+	Dwarf_Die *cudie = dwfl_module_addrdie (mod, addr, &bias);
+
+	Dwarf_Die *scopes = NULL;
+	int nscopes = dwarf_getscopes (cudie, addr - bias, &scopes);
+	if (nscopes <= 0)
+		goto done1;
+
+	for (int i = 0; i < nscopes; ++i) {
+		int tag = dwarf_tag(&scopes[i]);
+		if (tag != DW_TAG_subprogram && tag != DW_TAG_inlined_subroutine)
+			continue;
+
+		name = get_diename (&scopes[i]);
+		goto done2;
+	}
+
+done2:
+	free(scopes);
+done1:
+	if (name == NULL && !(name = dwfl_module_addrname(mod, addr)))
+		throw_dwfl_error("dwfl_module_addrname failed");
+	return std::string(name);
+}
+
 std::vector<SourceInfo>
 get_sources(Dwfl_Module *mod, Dwarf_Addr addr)
 {
@@ -128,22 +157,17 @@ get_sources(Dwfl_Module *mod, Dwarf_Addr addr)
 	if (!line)
 		return funcs; /* no line number information */
 
+	int lnum, cnum;
+	const char *srcfp;
+	if (!(srcfp = dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL)))
+		throw_dwfl_error("dwfl_lineinfo failed");
+
+	std::string func = get_dwarf_function(mod, addr);
+	funcs.push_back(SourceInfo(
+		func,
+		std::string(srcfp),
+		lnum, cnum));
+
 	get_inlines(funcs, mod, addr);
-	if (funcs.empty()) { // not inlined
-		int lnum, cnum;
-		const char *srcfp;
-		if (!(srcfp = dwfl_lineinfo(line, NULL, &lnum, &cnum, NULL, NULL)))
-			throw_dwfl_error("dwfl_lineinfo failed");
-
-		const char *name;
-		if (!(name = dwfl_module_addrname(mod, addr)))
-			throw_dwfl_error("dwfl_module_addrname failed");
-
-		funcs.push_back(SourceInfo(
-			std::string(name),
-			std::string(srcfp),
-			lnum, cnum));
-	}
-
 	return funcs;
 }
