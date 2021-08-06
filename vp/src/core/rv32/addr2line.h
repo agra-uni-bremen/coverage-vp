@@ -1,5 +1,5 @@
-#ifndef RISCV_VP_INLINE_H
-#define RISCV_VP_INLINE_H
+#ifndef RISCV_VP_ADDR2LINE_H
+#define RISCV_VP_ADDR2LINE_H
 
 #include <elfutils/libdwfl.h>
 

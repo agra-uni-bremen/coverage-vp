@@ -22,7 +22,7 @@
 #include <dwarf.h>
 
 #include "dwarf_exception.h"
-#include "inline.h"
+#include "addr2line.h"
 
 static const char *
 get_diename (Dwarf_Die *die)
@@ -119,7 +119,7 @@ get_inlines(std::vector<SourceInfo> &funcs, Dwfl_Module *mod, Dwarf_Addr addr)
 	free(scopes);
 }
 
-std::string
+static std::string
 get_dwarf_function (Dwfl_Module *mod, Dwarf_Addr addr)
 {
 	const char *name = NULL;

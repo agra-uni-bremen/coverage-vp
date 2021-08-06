@@ -6,7 +6,7 @@ add_library(rv32
 		coverage.cpp
 		json.cpp
 		basic_block.cpp
-		inline.cpp
+		addr2line.cpp
         ${HEADERS})
 
 target_link_libraries(rv32 symex core-common ${SoftFloat_LIBRARIES}
