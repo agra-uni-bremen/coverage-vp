@@ -34,9 +34,13 @@ void SourceLine::to_json(json &out) {
 }
 
 void Function::to_json(json &out) {
+	size_t visited = 0;
+	for (auto block : blocks)
+		if (block->visited) visited++;
+
 	out.push_back({
 		{"blocks", blocks.size()},
-		{"blocks_executed", blocks.visited()},
+		{"blocks_executed", visited},
 		{"demangled_name", name},
 		{"end_column", definition.second.column},
 		{"end_line", definition.second.line},

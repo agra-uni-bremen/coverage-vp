@@ -31,12 +31,3 @@ void BasicBlockList::visit(uint64_t addr) {
 size_t BasicBlockList::size(void) {
 	return blocks.size();
 }
-
-size_t BasicBlockList::visited(void) {
-	size_t visited = 0;
-
-	for (auto block : blocks)
-		if (block->visited) visited++;
-
-	return visited;
-}

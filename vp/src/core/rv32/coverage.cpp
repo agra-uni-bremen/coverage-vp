@@ -133,7 +133,7 @@ Coverage::add_func(uint64_t func_start, uint64_t func_end) {
 		auto sources = get_sources(mod, addr);
 		for (auto s : sources) {
 			if (s.symbol_name.empty() || s.source_path.empty())
-				continue; // FIXME: Bug in get_sources
+				assert(0);
 
 			bool newFile = files.count(s.source_path) == 0;
 			SourceFile &sf = files[s.source_path];
@@ -178,8 +178,9 @@ Coverage::add_func(uint64_t func_start, uint64_t func_end) {
 				Function &f = sf.funcs.at(s.symbol_name);
 				SourceLine sl = sf.lines.at(s.line);
 
-				BasicBlock *bb = f.blocks.add(block_prev, addr);
+				BasicBlock *bb = blocks.add(block_prev, addr);
 				sl.blocks.push_back(bb);
+				f.blocks.push_back(bb);
 			}
 			
 			block_prev = addr;
@@ -262,7 +263,7 @@ void Coverage::cover(uint64_t addr, bool tainted) {
 		Function &func = f.funcs.at(source.symbol_name);
 		if (addr == func.first_instr)
 			func.exec_count++;
-		func.blocks.visit(addr);
+		blocks.visit(addr);
 
 		SourceLine &sl = f.lines.at((unsigned int)source.line);
 		if (addr == sl.first_instr)

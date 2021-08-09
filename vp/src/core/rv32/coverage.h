@@ -39,7 +39,6 @@ public:
 	void visit(uint64_t addr);
 
 	size_t size(void);
-	size_t visited(void);
 };
 
 struct Function {
@@ -51,7 +50,9 @@ public:
 
 	std::string name;
 	std::pair<Location, Location> definition;
-	BasicBlockList blocks;
+
+	// References to BasicBlockList elements of Coverage.
+	std::vector<BasicBlock*> blocks;
 
 	uint64_t first_instr;
 	size_t exec_count = 0;
@@ -64,7 +65,7 @@ public:
 	std::string func_name;
 	Function::Location definition;
 
-	// References to BasicBlockList elements of func.
+	// References to BasicBlockList elements of Coverage.
 	std::vector<BasicBlock*> blocks;
 
 	uint64_t first_instr;
@@ -90,6 +91,7 @@ class Coverage {
 	int fd = -1;
 	Dwfl *dwfl = nullptr;
 	Dwfl_Module *mod = nullptr;
+	BasicBlockList blocks;
 
 	std::map<uint64_t, bool> block_leaders;
 	std::map<std::string, SourceFile> files;
