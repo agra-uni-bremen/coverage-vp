@@ -29,6 +29,7 @@ void SourceLine::to_json(json &out) {
 	j["unexecuted_block"] = has_unexecuted_block();
 	j["function_name"] = func_name;
 	j["symex/tainted_instr"] = !tainted_instrs.empty();
+	j["symex/symbolic_once"] = symbolic_once;
 
 	out.push_back(j);
 }

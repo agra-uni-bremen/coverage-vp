@@ -203,7 +203,8 @@ void ISS::exec_step() {
 		pc += 4;
 	}
 
-	bool tainted = false;
+	bool tainted_operand = false;
+	bool symbolic_operand = false;
 	if (coverage) {
 		std::vector<uint32_t> rops;
 		switch (Opcode::getType(op)) {
@@ -226,10 +227,11 @@ void ISS::exec_step() {
 		}
 
 		for (auto reg : rops) {
-			if (regs[reg]->is_tainted()) {
-				tainted = true;
-				break;
-			}
+			auto r = regs[reg];
+			if (r->is_tainted())
+				tainted_operand = true;
+			if (r->symbolic.has_value())
+				symbolic_operand = true;
 		}
 	}
 
@@ -1369,7 +1371,7 @@ void ISS::exec_step() {
             throw std::runtime_error("unknown opcode");
 	}
 
-	coverage->cover(last_pc, tainted);
+	coverage->cover(last_pc, tainted_operand, symbolic_operand);
 }
 
 uint64_t ISS::_compute_and_get_current_cycles() {
