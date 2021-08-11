@@ -203,6 +203,7 @@ void ISS::exec_step() {
 		pc += 4;
 	}
 
+	bool tainted = false;
 	if (coverage) {
 		std::vector<uint32_t> rops;
 		switch (Opcode::getType(op)) {
@@ -224,15 +225,12 @@ void ISS::exec_step() {
 				break;
 		}
 
-		bool tainted = false;
 		for (auto reg : rops) {
 			if (regs[reg]->is_tainted()) {
 				tainted = true;
 				break;
 			}
 		}
-
-		coverage->cover(last_pc, tainted);
 	}
 
 	if (trace) {
@@ -378,8 +376,6 @@ void ISS::exec_step() {
 		case Opcode::SB: {
 			auto addr = regs[RS1]->add(S_IMM);
 
-			if (addr->symbolic.has_value())
-				regs[RS2]->taint();
 			mem->store_byte(addr, regs[RS2]);
 		} break;
 
@@ -387,8 +383,6 @@ void ISS::exec_step() {
 			auto addr = regs[RS1]->add(S_IMM);
 			trap_check_addr_alignment<2, false>(addr);
 
-			if (addr->symbolic.has_value())
-				regs[RS2]->taint();
 			mem->store_half(addr, regs[RS2]);
 		} break;
 
@@ -396,8 +390,6 @@ void ISS::exec_step() {
 			auto addr = regs[RS1]->add(S_IMM);
 			trap_check_addr_alignment<4, false>(addr);
 
-			if (addr->symbolic.has_value())
-				regs[RS2]->taint();
 			mem->store_word(addr, regs[RS2]);
 		} break;
 
@@ -1376,6 +1368,8 @@ void ISS::exec_step() {
         default:
             throw std::runtime_error("unknown opcode");
 	}
+
+	coverage->cover(last_pc, tainted);
 }
 
 uint64_t ISS::_compute_and_get_current_cycles() {
