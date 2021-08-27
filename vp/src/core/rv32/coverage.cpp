@@ -271,14 +271,8 @@ void Coverage::cover(uint64_t addr, bool tainted, bool symbolic) {
 
 		if (symbolic)
 			sl.symbolic_once = true;
-		
-		if (tainted) {
-			sl.tainted_instrs[addr] = true;
-		} else if (!tainted) {
-			auto elem = sl.tainted_instrs.find(addr);
-			if (elem != sl.tainted_instrs.end())
-				sl.tainted_instrs.erase(elem);
-		}
+		if (tainted)
+			sl.tainted_once = true;
 	}
 }
 

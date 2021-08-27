@@ -64,14 +64,15 @@ class SourceLine {
 public:
 	std::string func_name;
 	Function::Location definition;
-	bool symbolic_once = false;
 
 	// References to BasicBlockList elements of Coverage.
 	std::vector<BasicBlock*> blocks;
 
 	uint64_t first_instr;
 	size_t exec_count = 0;
-	std::map<uint64_t, bool> tainted_instrs;
+
+	bool symbolic_once = false;
+	bool tainted_once = false;
 
 	void to_json(nlohmann::json &);
 };
