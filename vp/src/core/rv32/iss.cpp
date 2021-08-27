@@ -203,6 +203,7 @@ void ISS::exec_step() {
 		pc += 4;
 	}
 
+	bool initial_concretization = false;
 	bool tainted_operand = false;
 	bool symbolic_operand = false;
 	if (coverage) {
@@ -399,8 +400,10 @@ void ISS::exec_step() {
 			auto addr = regs[RS1]->add(I_IMM);
 			regs.write(RD, mem->load_byte(addr));
 
-			if (addr->symbolic.has_value())
+			if (addr->symbolic.has_value()) {
 				regs[RD]->taint();
+				initial_concretization = true;
+			}
 		} break;
 
 		case Opcode::LH: {
@@ -408,8 +411,10 @@ void ISS::exec_step() {
 			trap_check_addr_alignment<2, true>(addr);
 			regs.write(RD, mem->load_half(addr));
 
-			if (addr->symbolic.has_value())
+			if (addr->symbolic.has_value()) {
 				regs[RD]->taint();
+				initial_concretization = true;
+			}
 		} break;
 
 		case Opcode::LW: {
@@ -417,16 +422,20 @@ void ISS::exec_step() {
 			trap_check_addr_alignment<4, true>(addr);
                 	regs.write(RD, mem->load_word(addr));
 
-			if (addr->symbolic.has_value())
+			if (addr->symbolic.has_value()) {
 				regs[RD]->taint();
+				initial_concretization = true;
+			}
 		} break;
 
 		case Opcode::LBU: {
 			auto addr = regs[RS1]->add(I_IMM);
 			regs.write(RD, mem->load_ubyte(addr));
 
-			if (addr->symbolic.has_value())
+			if (addr->symbolic.has_value()) {
 				regs[RD]->taint();
+				initial_concretization = true;
+			}
 		} break;
 
 		case Opcode::LHU: {
@@ -434,8 +443,10 @@ void ISS::exec_step() {
 			trap_check_addr_alignment<2, true>(addr);
 			regs.write(RD, mem->load_uhalf(addr));
 
-			if (addr->symbolic.has_value())
+			if (addr->symbolic.has_value()) {
 				regs[RD]->taint();
+				initial_concretization = true;
+			}
 		} break;
 
 		case Opcode::BEQ: {
@@ -1371,7 +1382,7 @@ void ISS::exec_step() {
             throw std::runtime_error("unknown opcode");
 	}
 
-	coverage->cover(last_pc, tainted_operand, symbolic_operand);
+	coverage->cover(last_pc, tainted_operand, symbolic_operand, initial_concretization);
 }
 
 uint64_t ISS::_compute_and_get_current_cycles() {

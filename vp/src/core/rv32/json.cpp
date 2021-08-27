@@ -30,6 +30,7 @@ void SourceLine::to_json(json &out) {
 	j["function_name"] = func_name;
 	j["symex/tainted_once"] = tainted_once;
 	j["symex/symbolic_once"] = symbolic_once;
+	j["symex/initial_concretization"] = initial_conc;
 
 	out.push_back(j);
 }

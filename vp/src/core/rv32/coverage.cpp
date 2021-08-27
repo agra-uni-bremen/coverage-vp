@@ -252,7 +252,7 @@ Coverage::init(void) {
 		dwarf_getfuncs(cu, handle_func, (void *)&ctx, 0);
 }
 
-void Coverage::cover(uint64_t addr, bool tainted, bool symbolic) {
+void Coverage::cover(uint64_t addr, bool tainted, bool symbolic, bool init) {
 	auto sources = get_sources(mod, addr);
 	for (auto source : sources) {
 		if (files.count(source.source_path) == 0)
@@ -273,6 +273,8 @@ void Coverage::cover(uint64_t addr, bool tainted, bool symbolic) {
 			sl.symbolic_once = true;
 		if (tainted)
 			sl.tainted_once = true;
+		if (init)
+			sl.initial_conc = true;
 	}
 }
 

@@ -73,6 +73,7 @@ public:
 
 	bool symbolic_once = false;
 	bool tainted_once = false;
+	bool initial_conc = false;
 
 	void to_json(nlohmann::json &);
 };
@@ -109,7 +110,7 @@ public:
 	void init_basic_blocks(uint64_t, uint64_t);
 	void add_func(uint64_t, uint64_t);
 
-	void cover(uint64_t addr, bool tainted, bool symbolic);
+	void cover(uint64_t addr, bool tainted, bool symbolic, bool init);
 	void marshal(void);
 };
 
