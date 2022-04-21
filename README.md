@@ -4,7 +4,7 @@ Modified version of [SymEx-VP][symex-vp github] with Concolic Line Coverage supp
 
 ## Installation
 
-Refer to the original [installation][symex-vp installation]
+Refer to the original [installation][symex-vp install]
 instructions. Contrary to vanilla symex-vp, this repository also
 includes bundled a slightly modified version of [clover][clover github].
 
