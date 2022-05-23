@@ -2,7 +2,7 @@
 
 Modified version of [SymEx-VP][symex-vp github] with Concolic Line Coverage support.
 
-More information about coverage-vp is available in the IEEE Embedded System Letters (ESL) journal publication *Towards Quantification and Visualization of the Effects of Concretization during Concolic Testing*.
+More information about coverage-vp is available in the IEEE Embedded System Letters (ESL) journal publication [*Towards Quantification and Visualization of the Effects of Concretization during Concolic Testing*](https://doi.org/10.1109/LES.2022.3171603).
 
 ## Installation
 
